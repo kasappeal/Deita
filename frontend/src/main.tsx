@@ -1,9 +1,10 @@
+import { ChakraProvider } from '@chakra-ui/react'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { ChakraProvider } from '@chakra-ui/react'
-import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from 'react-query'
+import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
+import { AuthProvider } from './contexts/AuthContext'
 import './index.css'
 
 // Create a query client for react-query
@@ -21,7 +22,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <ChakraProvider>
         <QueryClientProvider client={queryClient}>
-          <App />
+          <AuthProvider>
+            <App />
+          </AuthProvider>
         </QueryClientProvider>
       </ChakraProvider>
     </BrowserRouter>
