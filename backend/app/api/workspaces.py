@@ -10,57 +10,18 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.api.utils import (
+    can_access_workspace,
+    can_modify_workspace,
+    get_workspace_or_404,
+    update_last_accessed
+)
 from app.core.auth import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.models import User, Workspace
 from app.schemas import WorkspaceCreate, WorkspaceUpdate, Workspace as WorkspaceSchema
 
 router = APIRouter()
-
-
-def get_workspace_or_404(db: Session, workspace_id: uuid.UUID) -> Workspace:
-    """Get workspace by ID or raise 404."""
-    workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
-    if not workspace:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found"
-        )
-    return workspace
-
-
-def can_access_workspace(workspace: Workspace, current_user: Optional[User]) -> bool:
-    """Check if user can access workspace based on visibility and ownership."""
-    # Public workspaces can be accessed by anyone
-    if workspace.visibility == "public":
-        return True
-    
-    # Private workspaces can only be accessed by the owner
-    if workspace.visibility == "private":
-        if not current_user:
-            return False
-        return workspace.owner_id == current_user.id
-    
-    return False
-
-
-def can_modify_workspace(workspace: Workspace, current_user: Optional[User]) -> bool:
-    """Check if user can modify workspace."""
-    # Orphan workspaces cannot be modified
-    if workspace.owner_id is None:
-        return False
-    
-    # Only the owner can modify the workspace
-    if not current_user:
-        return False
-    
-    return workspace.owner_id == current_user.id
-
-
-def update_last_accessed(db: Session, workspace: Workspace):
-    """Update workspace last_accessed_at timestamp."""
-    workspace.last_accessed_at = datetime.utcnow()
-    db.commit()
 
 
 @router.post("/", response_model=WorkspaceSchema, status_code=status.HTTP_201_CREATED)
@@ -219,9 +180,8 @@ async def claim_workspace(
             detail="Workspace already has an owner"
         )
     
-    # Assign current user as owner and make it private by default
+    # Assign current user as owner but preserve visibility
     workspace.owner_id = current_user.id
-    workspace.visibility = "private"
     workspace.last_accessed_at = datetime.utcnow()
     
     db.commit()

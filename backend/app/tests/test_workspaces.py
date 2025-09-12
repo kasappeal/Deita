@@ -141,6 +141,32 @@ class TestListWorkspaces:
         assert data[0]["name"] in ["Workspace 1", "Workspace 2"]
         assert data[1]["name"] in ["Workspace 1", "Workspace 2"]
 
+    def test_list_workspaces_user_isolation(self, client: TestClient):
+        """Test that users only see their own workspaces."""
+        # Create first user and their workspace
+        user1 = create_user(client, "user1@example.com")
+        headers1 = get_auth_headers(user1["id"])
+        client.post("/v1/workspaces/", json={"name": "User1 Workspace"}, headers=headers1)
+        
+        # Create second user and their workspace
+        user2 = create_user(client, "user2@example.com")
+        headers2 = get_auth_headers(user2["id"])
+        client.post("/v1/workspaces/", json={"name": "User2 Workspace"}, headers=headers2)
+        
+        # Check that user1 only sees their own workspace
+        response1 = client.get("/v1/workspaces/", headers=headers1)
+        assert response1.status_code == 200
+        data1 = response1.json()
+        assert len(data1) == 1
+        assert data1[0]["name"] == "User1 Workspace"
+        
+        # Check that user2 only sees their own workspace
+        response2 = client.get("/v1/workspaces/", headers=headers2)
+        assert response2.status_code == 200
+        data2 = response2.json()
+        assert len(data2) == 1
+        assert data2[0]["name"] == "User2 Workspace"
+
 
 class TestGetWorkspace:
     """Tests for GET /v1/workspaces/{id} endpoint."""
