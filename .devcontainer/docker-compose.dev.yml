@@ -1,0 +1,92 @@
+version: "3.8"
+
+services:
+  # Development container with all tools
+  devcontainer:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    container_name: deita-devcontainer
+    volumes:
+      - ..:/workspace:cached
+    ports:
+      - "8000:8000" # Backend API
+      - "3000:3000" # Frontend dev server
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      mailhog:
+        condition: service_healthy
+    command: sleep infinity
+    stdin_open: true
+    tty: true
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: deita-postgres-dev
+    environment:
+      POSTGRES_DB: deita
+      POSTGRES_USER: deita
+      POSTGRES_PASSWORD: deita
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deita -d deita"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO (S3-compatible storage)
+  minio:
+    image: minio/minio:latest
+    container_name: deita-minio-dev
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: deita
+      MINIO_ROOT_PASSWORD: deita123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://0.0.0.0:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # MailHog (Email testing)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: deita-mailhog-dev
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://0.0.0.0:8025",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  minio_data:
+    driver: local
+
+networks:
+  default:
+    name: deita-dev-network

@@ -1,0 +1,83 @@
+{
+  "name": "Deita Development Environment",
+  "dockerComposeFile": "docker-compose.dev.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "containerEnv": {
+    "UV_PROJECT_ENVIRONMENT": "/home/app/.local"
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Python extensions
+        "ms-python.python",
+				"ms-python.debugpy",
+				"ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "charliermarsh.ruff",
+        
+        // TypeScript/React extensions
+        "ms-vscode.vscode-typescript-next",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "formulahendry.auto-rename-tag",
+        "ms-vscode.vscode-json",
+        
+        // General extensions
+        "redhat.vscode-yaml",
+        "ms-vscode.makefile-tools"
+      ],
+      "settings": {
+        // Python settings
+        "python.defaultInterpreterPath": "/home/app/.local/bin/python",
+        "python.terminal.activateEnvironment": false,
+        "python.linting.enabled": true,
+        "python.linting.ruffEnabled": true,
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": ["backend/app/tests"],
+        
+        // TypeScript settings
+        "typescript.preferences.rootDir": "/workspace/frontend",
+        "eslint.workingDirectories": ["frontend"],
+        
+        // Editor settings
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": "explicit",
+          "source.fixAll.ruff": "explicit",
+          "source.fixAll.eslint": "explicit"
+        },
+        
+        // File associations
+        "files.associations": {
+          "*.dockerfile": "dockerfile",
+          "docker-compose*.yml": "dockercompose"
+        },
+        
+        // Exclusions
+        "files.exclude": {
+          "**/__pycache__": true,
+          "**/*.pyc": true,
+          ".pytest_cache": true,
+          ".coverage": true,
+          "htmlcov": true,
+          "**/node_modules": true,
+          "**/dist": true,
+          "**/build": true
+        },
+        
+        // Terminal
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.cwd": "/workspace"
+      }
+    }
+  },
+
+  "postCreateCommand": "bash -c 'echo \"Setting up development environment...\" && cd backend && uv sync --dev && cd ../frontend && npm install'",
+
+  "remoteUser": "app"
+}
