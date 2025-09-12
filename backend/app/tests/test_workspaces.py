@@ -19,10 +19,10 @@ settings = get_settings()
 
 def create_user(client: TestClient, email: str = "test@example.com") -> dict:
     """Create a user for testing and return the user data."""
-    # Since we don't have user creation endpoint, we'll mock directly in DB
-    from app.core.database import SessionLocal
+    # Use the same database session that the test client uses
+    from app.tests.conftest import TestingSessionLocal
     
-    db = SessionLocal()
+    db = TestingSessionLocal()
     user = User(
         email=email,
         full_name="Test User",
