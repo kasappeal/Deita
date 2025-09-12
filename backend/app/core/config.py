@@ -52,15 +52,10 @@ class Settings(BaseSettings):
     )
 
     # === File Upload Limits ===
-    max_file_size: int = Field(default=209715200, alias="MAX_FILE_SIZE")
-    max_workspace_storage: int = Field(
-        default=1073741824, alias="MAX_WORKSPACE_STORAGE"
-    )
-
-    # === Analytics (Posthog) ===
-    posthog_enabled: bool = Field(default=False, alias="POSTHOG_ENABLED")
-    posthog_api_key: str | None = Field(default=None, alias="POSTHOG_API_KEY")
-    posthog_host: str = Field(default="https://app.posthog.com", alias="POSTHOG_HOST")
+    orphaned_workspace_max_file_size: int = Field(default=52428800, alias="ORPHANED_WORKSPACE_MAX_FILE_SIZE")
+    orphaned_workspace_max_storage: int = Field(default=104857600, alias="ORPHANED_WORKSPACE_MAX_STORAGE")
+    owned_workspace_max_file_size: int = Field(default=209715200, alias="OWNED_WORKSPACE_MAX_FILE_SIZE")
+    owned_workspace_max_storage: int = Field(default=209715200, alias="OWNED_WORKSPACE_MAX_STORAGE")
 
     # === AI Service Configuration ===
     ai_model_name: str = Field(default="local-llm", alias="AI_MODEL_NAME")

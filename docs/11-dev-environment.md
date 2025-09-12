@@ -226,8 +226,6 @@ The dev container comes with debugging pre-configured:
 | DEBUG                       | Debug mode                    | true                                         |
 | APP_NAME                    | Application name              | Deita                                        |
 | APP_VERSION                 | Application version           | 0.1.0                                        |
-| MAX_FILE_SIZE               | Max upload file size (bytes)  | 209715200                                    |
-| MAX_WORKSPACE_STORAGE       | Max workspace storage (bytes) | 1073741824                                   |
 | DUCKDB_PATH                 | DuckDB file path              | /app/data/deita.duckdb                       |
 | POSTHOG_ENABLED             | Enable Posthog analytics      | false                                        |
 | POSTHOG_API_KEY             | Posthog API key               | (blank for dev)                              |
