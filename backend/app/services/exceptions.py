@@ -27,9 +27,6 @@ class FileTypeNotAllowed(BadRequestException):
 class FileTooLarge(BadRequestException):
     pass
 
-class FileMagicTypeNotAllowed(BadRequestException):
-    pass
-
 class WorkspaceOrphanModification(BadRequestException):
     pass
 

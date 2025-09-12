@@ -8,7 +8,6 @@ from app.core.config import Settings
 from app.models import User, Workspace
 from app.schemas import WorkspaceCreate, WorkspaceUpdate
 from app.services.exceptions import (
-    FileMagicTypeNotAllowed,
     FileTooLarge,
     FileTypeNotAllowed,
     WorkspaceAlreadyClaimed,
@@ -135,7 +134,7 @@ class TestWorkspaceService:
         file.file = MagicMock()
         file.file.read.return_value = b"abc"
         with patch("app.services.workspace_service.magic.from_buffer", return_value="application/pdf"):
-            with pytest.raises(FileMagicTypeNotAllowed):
+            with pytest.raises(FileTypeNotAllowed):
                 self.service.upload_file(self.workspace, file, self.user)
 
     def test_upload_file_permission_denied(self):

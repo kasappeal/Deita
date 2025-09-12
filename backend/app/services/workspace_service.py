@@ -15,7 +15,6 @@ from app.models import User, Workspace
 from app.models.file import File as FileModel
 from app.schemas import WorkspaceCreate, WorkspaceUpdate
 from app.services.exceptions import (
-    FileMagicTypeNotAllowed,
     FileTooLarge,
     FileTypeNotAllowed,
     WorkspaceAlreadyClaimed,
@@ -152,10 +151,10 @@ class WorkspaceService:
         if ext != ".csv":
             raise FileTypeNotAllowed("Only CSV files are allowed")
         if mime_type not in ["text/csv", "application/csv", "text/plain"]:
-            raise FileTypeNotAllowed("Invalid file type (MIME)")
+            raise FileTypeNotAllowed("Only CSV files are allowed")
         magic_type = magic.from_buffer(contents, mime=True)
         if magic_type not in ["text/csv", "application/csv", "text/plain"]:
-            raise FileMagicTypeNotAllowed(f"File magic type not allowed: {magic_type}")
+            raise FileTypeNotAllowed("Only CSV files are allowed")
 
     def _save_file_to_storage(self, workspace_id: uuid.UUID, contents: bytes) -> str:
         object_name = f"{workspace_id}_{uuid.uuid4()}.csv"
@@ -171,7 +170,6 @@ class WorkspaceService:
             table_name=self._get_name_without_extension(filename),
             filename=filename,
             storage_path=storage_path,
-            status="pending",
             size=file_size,
         )
         self.db.add(file_record)
