@@ -4,7 +4,6 @@ Utility functions for workspace API operations.
 
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -23,31 +22,31 @@ def get_workspace_or_404(db: Session, workspace_id: uuid.UUID) -> Workspace:
     return workspace
 
 
-def can_access_workspace(workspace: Workspace, current_user: Optional[User]) -> bool:
+def can_access_workspace(workspace: Workspace, current_user: User | None) -> bool:
     """Check if user can access workspace based on visibility and ownership."""
     # Public workspaces can be accessed by anyone
     if workspace.visibility == "public":
         return True
-    
+
     # Private workspaces can only be accessed by the owner
     if workspace.visibility == "private":
         if not current_user:
             return False
         return workspace.owner_id == current_user.id
-    
+
     return False
 
 
-def can_modify_workspace(workspace: Workspace, current_user: Optional[User]) -> bool:
+def can_modify_workspace(workspace: Workspace, current_user: User | None) -> bool:
     """Check if user can modify workspace."""
     # Orphan workspaces cannot be modified
     if workspace.owner_id is None:
         return False
-    
+
     # Only the owner can modify the workspace
     if not current_user:
         return False
-    
+
     return workspace.owner_id == current_user.id
 
 

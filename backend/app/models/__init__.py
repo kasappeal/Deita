@@ -6,8 +6,8 @@ import uuid
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.core.database import Base
 
@@ -47,8 +47,8 @@ class Workspace(Base):
     )
     name = Column(String, nullable=False)
     owner_id = Column(
-        Integer, 
-        ForeignKey("users.id", ondelete="SET NULL"), 
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         index=True
     )
