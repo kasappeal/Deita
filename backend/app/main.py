@@ -8,6 +8,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.health import router as health_router
 from app.api.workspace import router as workspace_router
+from app.api.admin import router as admin_router
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -40,6 +41,7 @@ app.add_middleware(
 # Include routers
 app.include_router(health_router, prefix="/v1", tags=["Health"])
 app.include_router(workspace_router, prefix="/v1", tags=["Workspaces"])
+app.include_router(admin_router, prefix="/v1/admin", tags=["Admin & GDPR"])
 
 
 @app.get("/")
