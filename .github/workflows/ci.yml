@@ -1,0 +1,83 @@
+# GitHub Actions CI for Deita
+# Runs backend and frontend tests on push and PR
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: deita
+          POSTGRES_PASSWORD: deita
+          POSTGRES_DB: deita
+        ports: [5432:5432]
+        options: >-
+          --health-cmd="pg_isready -U deita" --health-interval=10s --health-timeout=5s --health-retries=5
+      minio:
+        image: bitnami/minio:latest
+        env:
+          MINIO_ACCESS_KEY: minio
+          MINIO_SECRET_KEY: minio123
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd="curl -f http://localhost:9000/minio/health/live || exit 1" --health-interval=10s --health-timeout=5s --health-retries=5
+    env:
+      DATABASE_URL: postgresql://deita:deita@localhost:5432/deita
+      S3_ENDPOINT: http://localhost:9000
+      S3_ACCESS_KEY: deita
+      S3_SECRET_KEY: deita123
+      S3_BUCKET_NAME: deita-files
+      SECRET_KEY: testsecret
+      ALGORITHM: HS256
+      ENVIRONMENT: test
+      DEBUG: true
+      DUCKDB_PATH: /tmp/deita.duckdb
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install uv
+        run: pip install uv
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          uv sync
+      - name: Run migrations
+        run: |
+          cd backend
+          uv run alembic upgrade head
+      - name: Run backend tests
+        run: |
+          cd backend
+          uv run pytest --maxfail=1 --disable-warnings --cov=app --cov-report=term-missing
+
+  frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+      - name: Run frontend tests
+        run: |
+          cd frontend
+          npm test -- --ci --coverage

@@ -63,9 +63,6 @@ docker-compose.override.yml
 tmp/
 temp/
 
-# Lock files (keep uv.lock but not package-lock.json for example)
-package-lock.json
-
 # Development data
 data/
 uploads/
