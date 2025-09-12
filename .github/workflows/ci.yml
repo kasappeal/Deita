@@ -26,9 +26,9 @@ jobs:
       minio:
         image: bitnami/minio:latest
         env:
-          MINIO_DEFAULT_BUCKETS: deita-files
+          MINIO_DEFAULT_BUCKETS: deita
           MINIO_SERVER_ACCESS_KEY: deita
-          MINIO_SERVER_SECRET_KEY: deita123
+          MINIO_SERVER_SECRET_KEY: deita12345678
         ports:
           - 9000:9000
         options: >-
@@ -37,8 +37,8 @@ jobs:
       DATABASE_URL: postgresql://deita:deita@localhost:5432/deita
       S3_ENDPOINT: http://localhost:9000
       S3_ACCESS_KEY: deita
-      S3_SECRET_KEY: deita123
-      S3_BUCKET_NAME: deita-files
+      S3_SECRET_KEY: deita12345678
+      S3_BUCKET_NAME: deita
       SECRET_KEY: testsecret
       ALGORITHM: HS256
       ENVIRONMENT: test
