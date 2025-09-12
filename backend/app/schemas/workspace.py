@@ -27,6 +27,7 @@ class Workspace(BaseModel):
     last_accessed_at: datetime
     max_file_size: int | None = None
     max_storage: int | None = None
+    storage_used: int | None = None
 
     class Config:
         from_attributes = True

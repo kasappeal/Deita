@@ -130,6 +130,10 @@ class WorkspaceService:
         self._validate_file_type(filename, mime_type, contents)
         storage_path = self._save_file_to_storage(workspace_uuid, contents)
         file_record = self._create_file_record(workspace, filename, storage_path, file_size)
+        # Increment workspace.storage_used and persist
+        workspace.storage_used += file_size # type: ignore
+        self.db.commit()
+        self.db.refresh(workspace)
         return file_record
 
     def _validate_file_permissions(self, workspace: Workspace, user: User | None):
