@@ -23,7 +23,7 @@ def upgrade() -> None:
     # Create users table
     op.create_table(
         "users",
-        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("id", sa.Integer(), nullable=False, primary_key=True, autoincrement=True),
         sa.Column("email", sa.String(), nullable=False),
         sa.Column("full_name", sa.String(), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=False, default=True),
@@ -45,15 +45,15 @@ def upgrade() -> None:
     )
 
     # Create indexes
-    op.create_index(op.f("ix_users_id"), "users", ["id"], unique=False)
-    op.create_index(op.f("ix_users_email"), "users", ["email"], unique=False)
+    op.create_index(op.f("ix_users_email"), "users", ["email"], unique=True)
+    op.create_index(op.f("ix_users_is_active"), "users", ["is_active"], unique=False)
 
 
 def downgrade() -> None:
     """Downgrade database schema."""
     # Drop indexes
     op.drop_index(op.f("ix_users_email"), table_name="users")
-    op.drop_index(op.f("ix_users_id"), table_name="users")
+    op.drop_index(op.f("ix_users_is_active"), table_name="users")
 
     # Drop table
     op.drop_table("users")

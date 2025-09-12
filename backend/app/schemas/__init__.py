@@ -2,7 +2,9 @@
 Pydantic schemas for API request/response models.
 """
 
+import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr
 
@@ -35,6 +37,34 @@ class User(UserBase):
     is_superuser: bool
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Workspace schemas
+class WorkspaceCreate(BaseModel):
+    """Schema for creating a workspace."""
+
+    name: str
+    visibility: Literal["public", "private"] | None = None
+
+
+class WorkspaceUpdate(BaseModel):
+    """Schema for updating a workspace."""
+
+    name: str | None = None
+    visibility: Literal["public", "private"] | None = None
+
+
+class Workspace(BaseModel):
+    """Workspace schema for responses."""
+
+    id: uuid.UUID
+    name: str
+    visibility: Literal["public", "private"]
+    created_at: datetime
+    last_accessed_at: datetime
 
     class Config:
         from_attributes = True

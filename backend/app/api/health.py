@@ -2,7 +2,7 @@
 Hello World and Health Check API routes.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
@@ -40,7 +40,7 @@ async def health_check(db: Session = Depends(get_db)):
         status="healthy" if db_status == "healthy" else "unhealthy",
         message=f"API is running. Database: {db_status}",
         version=settings.app_version,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
     )
 
 
