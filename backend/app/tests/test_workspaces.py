@@ -21,9 +21,7 @@ def create_user(client: TestClient, email: str = "test@example.com") -> dict:
     db = TestingSessionLocal()
     user = User(
         email=email,
-        full_name="Test User",
-        is_active=True,
-        is_superuser=False,
+        full_name="Test User"
     )
     db.add(user)
     db.commit()
@@ -285,7 +283,7 @@ class TestUpdateWorkspace:
             json={"name": "Updated Name"}
         )
 
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_update_workspace_as_different_user(self, client: TestClient):
         """Test updating workspace as different user returns 403."""
@@ -368,7 +366,7 @@ class TestDeleteWorkspace:
         # Try to delete without auth
         response = client.delete(f"/v1/workspaces/{workspace_id}")
 
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_delete_workspace_as_owner(self, client: TestClient):
         """Test deleting workspace as owner succeeds."""
