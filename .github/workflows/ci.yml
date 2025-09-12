@@ -26,8 +26,9 @@ jobs:
       minio:
         image: bitnami/minio:latest
         env:
-          MINIO_ACCESS_KEY: deita
-          MINIO_SECRET_KEY: deita123
+          MINIO_DEFAULT_BUCKETS: deita-files
+          MINIO_SERVER_ACCESS_KEY: deita
+          MINIO_SERVER_SECRET_KEY: deita123
         ports:
           - 9000:9000
         options: >-
