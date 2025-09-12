@@ -1,188 +1,129 @@
 """
 Workspace management API routes.
 """
-
 import uuid
-from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, UploadFile, status
+from fastapi import File as FastAPIFile
+from minio import Minio
 from sqlalchemy.orm import Session
 
-from app.api.utils import (
-    can_access_workspace,
-    can_modify_workspace,
-    get_workspace_or_404,
-    update_last_accessed,
-)
 from app.core.auth import get_current_user, get_current_user_optional
+from app.core.config import get_settings
 from app.core.database import get_db
-from app.models import User, Workspace
+from app.models import User
 from app.schemas import Workspace as WorkspaceSchema
 from app.schemas import WorkspaceCreate, WorkspaceUpdate
+from app.schemas.file import File as FileSchema
+from app.services.file_storage import FileStorage
+from app.services.workspace_service import WorkspaceService
+
+
+def get_workspace_service(db: Session = Depends(get_db)) -> WorkspaceService:
+    settings = get_settings()
+    minio_client = Minio(
+        settings.s3_endpoint.replace('http://', '').replace('https://', ''),
+        access_key=settings.s3_access_key,
+        secret_key=settings.s3_secret_key,
+        secure=settings.s3_endpoint.startswith('https://'),
+    )
+    file_storage = FileStorage(settings=settings, client=minio_client)
+    return WorkspaceService(db, file_storage=file_storage, settings=settings)
+
 
 router = APIRouter()
+
+
+# --- Secure File Upload Endpoint ---
+@router.post("/{workspace_id}/files", response_model=FileSchema, status_code=status.HTTP_201_CREATED)
+async def upload_file(
+    workspace_id: uuid.UUID,
+    file: UploadFile = FastAPIFile(...),
+    current_user: User | None = Depends(get_current_user_optional),
+    service: WorkspaceService = Depends(get_workspace_service),
+):
+    """Upload a CSV file to a workspace with security and validation."""
+    workspace = service.get_workspace_by_id(workspace_id)
+    file_record = service.upload_file(workspace, file, current_user)
+    return FileSchema.model_validate(file_record)
 
 
 @router.post("/", response_model=WorkspaceSchema, status_code=status.HTTP_201_CREATED)
 async def create_workspace(
     workspace_data: WorkspaceCreate,
-    db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_current_user_optional)
+    current_user: User | None = Depends(get_current_user_optional),
+    service: WorkspaceService = Depends(get_workspace_service),
 ):
     """Create a new workspace."""
-
-    # Determine visibility based on authentication
-    if current_user is None:
-        # No authentication provided - create public workspace without owner
-        visibility = "public"
-        owner_id = None
-    else:
-        # Authentication provided - set default visibility to private unless specified
-        visibility = workspace_data.visibility or "private"
-        owner_id = current_user.id
-
-    workspace = Workspace(
-        name=workspace_data.name,
-        owner_id=owner_id,
-        visibility=visibility
-    )
-
-    db.add(workspace)
-    db.commit()
-    db.refresh(workspace)
-
+    workspace = service.create_workspace(workspace_data, current_user)
     return workspace
 
 
 @router.get("/", response_model=list[WorkspaceSchema])
 async def list_workspaces(
-    db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_current_user_optional)
+    current_user: User | None = Depends(get_current_user_optional),
+    service: WorkspaceService = Depends(get_workspace_service),
 ):
     """List workspaces that belong to the authenticated user."""
-
-    if not current_user:
-        # Return empty list for unauthenticated users
-        return []
-
-    workspaces = db.query(Workspace).filter(Workspace.owner_id == current_user.id).all()
-    return workspaces
+    return service.list_workspaces(current_user)
 
 
 @router.get("/{workspace_id}", response_model=WorkspaceSchema)
 async def get_workspace(
     workspace_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_current_user_optional)
+    current_user: User | None = Depends(get_current_user_optional),
+    service: WorkspaceService = Depends(get_workspace_service),
 ):
     """Get workspace details by ID."""
-
-    workspace = get_workspace_or_404(db, workspace_id)
-
-    if not can_access_workspace(workspace, current_user):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found"
-        )
-
-    # Update last accessed timestamp
-    update_last_accessed(db, workspace)
-
+    workspace = service.get_workspace_by_id(workspace_id)
+    if not service.can_access(workspace, current_user):
+        from app.services.exceptions import WorkspaceNotFound
+        raise WorkspaceNotFound("Workspace not found")
+    # Optionally update last accessed timestamp
+    service.update_last_accessed(workspace)
     return workspace
+
 
 
 @router.put("/{workspace_id}", response_model=WorkspaceSchema)
 async def update_workspace(
     workspace_id: uuid.UUID,
     workspace_data: WorkspaceUpdate,
-    db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_current_user_optional)
+    current_user: User = Depends(get_current_user),
+    service: WorkspaceService = Depends(get_workspace_service),
 ):
     """Update workspace by ID."""
+    workspace = service.get_workspace_by_id(workspace_id)
+    if not service.is_owner(workspace, current_user):
+        from app.services.exceptions import WorkspaceForbidden
+        raise WorkspaceForbidden("Not authorized to update this workspace")
+    updated = service.update_workspace(workspace, workspace_data)
+    return updated
 
-    workspace = get_workspace_or_404(db, workspace_id)
-
-    # Check if workspace is orphan
-    if workspace.owner_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot modify orphan workspace"
-        )
-
-    if not can_modify_workspace(workspace, current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to modify this workspace"
-        )
-
-    # Update fields if provided
-    if workspace_data.name is not None:
-        workspace.name = workspace_data.name
-
-    if workspace_data.visibility is not None:
-        workspace.visibility = workspace_data.visibility
-
-    # Update last accessed timestamp
-    workspace.last_accessed_at = datetime.now(timezone.utc)
-
-    db.commit()
-    db.refresh(workspace)
-
-    return workspace
 
 
 @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_workspace(
     workspace_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_current_user_optional)
+    current_user: User = Depends(get_current_user),
+    service: WorkspaceService = Depends(get_workspace_service),
 ):
     """Delete workspace by ID."""
-
-    workspace = get_workspace_or_404(db, workspace_id)
-
-    # Check if workspace is orphan
-    if workspace.owner_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot delete orphan workspace"
-        )
-
-    if not can_modify_workspace(workspace, current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this workspace"
-        )
-
-    # TODO: Implement background tasks for file deletion
-    # For now, just delete the workspace record
-    db.delete(workspace)
-    db.commit()
-
+    workspace = service.get_workspace_by_id(workspace_id)
+    if not service.is_owner(workspace, current_user):
+        from app.services.exceptions import WorkspaceForbidden
+        raise WorkspaceForbidden("Not authorized to delete this workspace")
+    service.delete_workspace(workspace)
     return None
 
 
 @router.post("/{workspace_id}/claim", status_code=status.HTTP_204_NO_CONTENT)
 async def claim_workspace(
     workspace_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    service: WorkspaceService = Depends(get_workspace_service),
 ):
     """Claim an orphan workspace."""
-
-    workspace = get_workspace_or_404(db, workspace_id)
-
-    # Only orphan workspaces can be claimed
-    if workspace.owner_id is not None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Workspace already has an owner"
-        )
-
-    # Assign current user as owner but preserve visibility
-    workspace.owner_id = current_user.id
-    workspace.last_accessed_at = datetime.now(timezone.utc)
-
-    db.commit()
-
+    workspace = service.get_workspace_by_id(workspace_id)
+    service.claim_workspace(workspace, current_user)
     return None
