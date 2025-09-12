@@ -4,7 +4,6 @@ Workspace management API routes.
 import uuid
 
 from fastapi import APIRouter, Depends, UploadFile, status
-from fastapi import File as FastAPIFile
 from minio import Minio
 from sqlalchemy.orm import Session
 
@@ -34,11 +33,10 @@ def get_workspace_service(db: Session = Depends(get_db)) -> WorkspaceService:
 router = APIRouter()
 
 
-# --- Secure File Upload Endpoint ---
-@router.post("/{workspace_id}/files", response_model=FileSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/{workspace_id}/files/", response_model=FileSchema, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 async def upload_file(
     workspace_id: uuid.UUID,
-    file: UploadFile = FastAPIFile(...),
+    file: UploadFile,
     current_user: User | None = Depends(get_current_user_optional),
     service: WorkspaceService = Depends(get_workspace_service),
 ):
