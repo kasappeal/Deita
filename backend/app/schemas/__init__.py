@@ -3,8 +3,9 @@ Pydantic schemas for API request/response models.
 """
 
 from datetime import datetime
+from uuid import UUID
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 
 class UserBase(BaseModel):
@@ -30,14 +31,13 @@ class UserUpdate(BaseModel):
 class User(UserBase):
     """User schema for responses."""
 
-    id: int
+    id: UUID
     is_active: bool
     is_superuser: bool
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class HealthCheck(BaseModel):
@@ -55,3 +55,36 @@ class HelloWorld(BaseModel):
     message: str
     version: str
     environment: str
+
+
+# Import workspace schemas
+from .workspace import (
+    CreateWorkspaceRequest,
+    CreateOrphanWorkspaceRequest,
+    UpdateWorkspaceRequest,
+    ClaimWorkspaceRequest,
+    WorkspaceVisibilityRequest,
+    ShareWorkspaceRequest,
+    WorkspaceFilters,
+    WorkspaceResponse,
+    WorkspaceListResponse,
+    WorkspaceDetailsResponse,
+    ValidateWorkspaceNameRequest,
+    ValidateWorkspaceNameResponse,
+    ShareLinkResponse,
+    WorkspaceUsageResponse,
+    WorkspaceUsageSchema,
+    WorkspaceAuditLogSchema,
+)
+
+__all__ = [
+    "UserBase", "UserCreate", "UserUpdate", "User",
+    "HealthCheck", "HelloWorld",
+    "CreateWorkspaceRequest", "CreateOrphanWorkspaceRequest", 
+    "UpdateWorkspaceRequest", "ClaimWorkspaceRequest",
+    "WorkspaceVisibilityRequest", "ShareWorkspaceRequest",
+    "WorkspaceFilters", "WorkspaceResponse", "WorkspaceListResponse",
+    "WorkspaceDetailsResponse", "ValidateWorkspaceNameRequest",
+    "ValidateWorkspaceNameResponse", "ShareLinkResponse",
+    "WorkspaceUsageResponse", "WorkspaceUsageSchema", "WorkspaceAuditLogSchema"
+]
