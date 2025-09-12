@@ -3,6 +3,7 @@ Workspace management API routes.
 """
 
 import uuid
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -58,7 +59,7 @@ def can_modify_workspace(workspace: Workspace, current_user: Optional[User]) -> 
 
 def update_last_accessed(db: Session, workspace: Workspace):
     """Update workspace last_accessed_at timestamp."""
-    workspace.last_accessed_at = func.now()
+    workspace.last_accessed_at = datetime.utcnow()
     db.commit()
 
 
@@ -162,7 +163,7 @@ async def update_workspace(
         workspace.visibility = workspace_data.visibility
     
     # Update last accessed timestamp
-    workspace.last_accessed_at = func.now()
+    workspace.last_accessed_at = datetime.utcnow()
     
     db.commit()
     db.refresh(workspace)
@@ -221,7 +222,7 @@ async def claim_workspace(
     # Assign current user as owner and make it private by default
     workspace.owner_id = current_user.id
     workspace.visibility = "private"
-    workspace.last_accessed_at = func.now()
+    workspace.last_accessed_at = datetime.utcnow()
     
     db.commit()
     
