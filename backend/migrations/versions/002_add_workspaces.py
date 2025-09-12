@@ -50,7 +50,6 @@ def upgrade() -> None:
     )
 
     # Create indexes
-    op.create_index(op.f("ix_workspaces_id"), "workspaces", ["id"], unique=False)
     op.create_index(op.f("ix_workspaces_owner_id"), "workspaces", ["owner_id"], unique=False)
 
 

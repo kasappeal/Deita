@@ -3,7 +3,7 @@ Workspace management API routes.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -123,7 +123,7 @@ async def update_workspace(
         workspace.visibility = workspace_data.visibility
 
     # Update last accessed timestamp
-    workspace.last_accessed_at = datetime.utcnow()
+    workspace.last_accessed_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(workspace)
@@ -181,7 +181,7 @@ async def claim_workspace(
 
     # Assign current user as owner but preserve visibility
     workspace.owner_id = current_user.id
-    workspace.last_accessed_at = datetime.utcnow()
+    workspace.last_accessed_at = datetime.now(timezone.utc)
 
     db.commit()
 
