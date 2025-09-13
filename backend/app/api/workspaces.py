@@ -33,7 +33,7 @@ def get_workspace_service(db: Session = Depends(get_db)) -> WorkspaceService:
 router = APIRouter()
 
 
-@router.post("/{workspace_id}/files/", status_code=status.HTTP_201_CREATED)
+@router.post("/{workspace_id}/files/", status_code=status.HTTP_201_CREATED, include_in_schema=False)
 async def upload_file(
     workspace_id: uuid.UUID,
     file: UploadFile,
