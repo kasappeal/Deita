@@ -90,6 +90,18 @@ async def get_workspace(
 
 
 
+@router.get("/{workspace_id}/files", response_model=list[FileSchema])
+async def list_workspace_files(
+    workspace_id: uuid.UUID,
+    current_user: User | None = Depends(get_current_user_optional),
+    service: WorkspaceService = Depends(get_workspace_service),
+):
+    """List all files in a workspace."""
+    workspace = service.get_workspace_by_id(workspace_id)
+    files = service.list_workspace_files(workspace, current_user)
+    return files
+
+
 @router.put("/{workspace_id}", response_model=WorkspaceSchema)
 async def update_workspace(
     workspace_id: uuid.UUID,
