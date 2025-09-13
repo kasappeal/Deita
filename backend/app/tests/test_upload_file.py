@@ -23,13 +23,13 @@ class TestUploadFile:
         resp = client.post(f"/v1/workspaces/{ws_id}/files/", files=files)
         assert resp.status_code == 201
         data = resp.json()
-        assert data["filename"] == "test.csv"
-        assert data["size"] == len(file_content)
-        assert "uploaded_at" in data
-        # Check storage_used incremented via API
-        resp2 = client.get(f"/v1/workspaces/{ws_id}")
-        assert resp2.status_code == 200
-        ws_data = resp2.json()
+        # Access file data from the nested structure
+        file_data = data["file"]
+        assert file_data["filename"] == "test.csv"
+        assert file_data["size"] == len(file_content)
+        assert "uploaded_at" in file_data
+        # Check workspace data from the response directly
+        ws_data = data["workspace"]
         assert ws_data["storage_used"] == len(file_content)
 
     def test_upload_csv_file_private_workspace_owner(self, client: TestClient):
@@ -42,13 +42,13 @@ class TestUploadFile:
         resp = client.post(f"/v1/workspaces/{ws_id}/files/", files=files, headers=headers)
         assert resp.status_code == 201
         data = resp.json()
-        assert data["filename"] == "private.csv"
-        assert data["size"] == len(file_content)
-        assert "uploaded_at" in data
-        # Check storage_used incremented via API
-        resp2 = client.get(f"/v1/workspaces/{ws_id}", headers=headers)
-        assert resp2.status_code == 200
-        ws_data = resp2.json()
+        # Access file data from the nested structure
+        file_data = data["file"]
+        assert file_data["filename"] == "private.csv"
+        assert file_data["size"] == len(file_content)
+        assert "uploaded_at" in file_data
+        # Check workspace data from the response directly
+        ws_data = data["workspace"]
         assert ws_data["storage_used"] == len(file_content)
 
     def test_upload_csv_file_private_workspace_not_owner(self, client: TestClient):

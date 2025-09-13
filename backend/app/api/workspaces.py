@@ -33,7 +33,7 @@ def get_workspace_service(db: Session = Depends(get_db)) -> WorkspaceService:
 router = APIRouter()
 
 
-@router.post("/{workspace_id}/files/", response_model=FileSchema, status_code=status.HTTP_201_CREATED, include_in_schema=False)
+@router.post("/{workspace_id}/files/", status_code=status.HTTP_201_CREATED)
 async def upload_file(
     workspace_id: uuid.UUID,
     file: UploadFile,
@@ -43,7 +43,14 @@ async def upload_file(
     """Upload a CSV file to a workspace with security and validation."""
     workspace = service.get_workspace_by_id(workspace_id)
     file_record = service.upload_file(workspace, file, current_user)
-    return FileSchema.model_validate(file_record)
+    # Get the updated workspace with refreshed storage_used
+    updated_workspace = service.get_workspace_by_id(workspace_id)
+
+    # Return both the file info and updated workspace info
+    return {
+        "file": FileSchema.model_validate(file_record),
+        "workspace": WorkspaceSchema.model_validate(updated_workspace)
+    }
 
 
 @router.post("/", response_model=WorkspaceSchema, status_code=status.HTTP_201_CREATED)
