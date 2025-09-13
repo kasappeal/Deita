@@ -244,3 +244,68 @@ class TestListWorkspaceFiles:
         assert file_data["filename"] == "test_table.csv"
         assert file_data["table_name"] == "test_table"
         assert file_data["size"] == 1024
+
+    def test_list_files_only_from_requested_workspace(self, client: TestClient):
+        """Test that only files from the requested workspace are returned, not from other workspaces."""
+        # Create three public workspaces with different numbers of files
+        workspace1 = create_workspace(client, name="Workspace 1", visibility="public")
+        workspace2 = create_workspace(client, name="Workspace 2", visibility="public")
+        workspace3 = create_workspace(client, name="Workspace 3", visibility="public")
+
+        workspace1_id = workspace1["id"]
+        workspace2_id = workspace2["id"]
+        workspace3_id = workspace3["id"]
+
+        # Create 2 files in workspace1
+        file1_ws1 = create_file(client, workspace1_id, "data1_ws1.csv")
+        file2_ws1 = create_file(client, workspace1_id, "data2_ws1.csv")
+
+        # Create 3 files in workspace2
+        file1_ws2 = create_file(client, workspace2_id, "data1_ws2.csv")
+        file2_ws2 = create_file(client, workspace2_id, "data2_ws2.csv")
+        file3_ws2 = create_file(client, workspace2_id, "data3_ws2.csv")
+
+        # Create 1 file in workspace3
+        file1_ws3 = create_file(client, workspace3_id, "data1_ws3.csv")
+
+        # Test workspace1 - should return only its 2 files
+        response1 = client.get(f"/v1/workspaces/{workspace1_id}/files")
+        assert response1.status_code == 200
+        data1 = response1.json()
+        assert len(data1) == 2
+
+        # Verify only workspace1 files are returned
+        file_ids_ws1 = [f["id"] for f in data1]
+        assert file1_ws1["id"] in file_ids_ws1
+        assert file2_ws1["id"] in file_ids_ws1
+        # Ensure no files from other workspaces
+        assert file1_ws2["id"] not in file_ids_ws1
+        assert file1_ws3["id"] not in file_ids_ws1
+
+        # Test workspace2 - should return only its 3 files
+        response2 = client.get(f"/v1/workspaces/{workspace2_id}/files")
+        assert response2.status_code == 200
+        data2 = response2.json()
+        assert len(data2) == 3
+
+        # Verify only workspace2 files are returned
+        file_ids_ws2 = [f["id"] for f in data2]
+        assert file1_ws2["id"] in file_ids_ws2
+        assert file2_ws2["id"] in file_ids_ws2
+        assert file3_ws2["id"] in file_ids_ws2
+        # Ensure no files from other workspaces
+        assert file1_ws1["id"] not in file_ids_ws2
+        assert file1_ws3["id"] not in file_ids_ws2
+
+        # Test workspace3 - should return only its 1 file
+        response3 = client.get(f"/v1/workspaces/{workspace3_id}/files")
+        assert response3.status_code == 200
+        data3 = response3.json()
+        assert len(data3) == 1
+
+        # Verify only workspace3 file is returned
+        file_ids_ws3 = [f["id"] for f in data3]
+        assert file1_ws3["id"] in file_ids_ws3
+        # Ensure no files from other workspaces
+        assert file1_ws1["id"] not in file_ids_ws3
+        assert file1_ws2["id"] not in file_ids_ws3
