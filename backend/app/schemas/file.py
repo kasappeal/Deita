@@ -18,6 +18,7 @@ class FileCreate(BaseModel):
 
 class File(FileBase):
     id: uuid.UUID
+    table_name: str
     uploaded_at: datetime
 
     model_config = {"from_attributes": True}

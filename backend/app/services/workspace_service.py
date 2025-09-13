@@ -117,6 +117,23 @@ class WorkspaceService:
         total = self.db.query(func.coalesce(func.sum(FileModel.size), 0)).filter(FileModel.workspace_id == workspace_id).scalar() or 0
         return total
 
+    def list_workspace_files(self, workspace: Workspace, user: User | None) -> list[FileModel]:
+        """List all files in a workspace, respecting access permissions."""
+        # For public workspaces, anyone can see the files
+        if workspace.is_public:
+            return self.db.query(FileModel).filter(FileModel.workspace_id == workspace.id).all()
+
+        # For private workspaces, only the owner can see files
+        if workspace.is_private:
+            if user and workspace.owner_id == user.id:
+                return self.db.query(FileModel).filter(FileModel.workspace_id == workspace.id).all()
+            else:
+                # Return empty list if no auth user or user is not the owner
+                return []
+
+        # Fallback to empty list for any other case
+        return []
+
     def upload_file(self, workspace: Workspace, file: UploadFile, user: User | None) -> FileModel:
         self._validate_file_permissions(workspace, user)
         contents = file.file.read()
