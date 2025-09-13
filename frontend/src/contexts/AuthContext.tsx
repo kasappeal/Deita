@@ -13,6 +13,8 @@ export interface Workspace {
   visibility: string;
   owner?: string;
   created_at?: string;
+  storage_used?: number;
+  max_storage?: number;
 }
 
 interface AuthContextType {
