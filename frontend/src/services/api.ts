@@ -58,6 +58,12 @@ export interface TableData {
   columns: number;
 }
 
+export interface QueryResult {
+  columns: string[];
+  rows: (string | number | boolean | null)[][];
+  time: number;
+}
+
 // API functions
 export const workspaceApi = {
   getFiles: async (workspaceId: string): Promise<FileData[]> => {
@@ -67,6 +73,13 @@ export const workspaceApi = {
   
   getTables: async (workspaceId: string): Promise<TableData[]> => {
     const response = await apiClient.get(`/v1/workspaces/${workspaceId}/tables`);
+    return response.data;
+  },
+  
+  executeQuery: async (workspaceId: string, query: string): Promise<QueryResult> => {
+    const response = await apiClient.post(`/v1/workspaces/${workspaceId}/query`, {
+      query
+    });
     return response.data;
   },
 };

@@ -1,7 +1,6 @@
 import {
   Alert,
   AlertIcon,
-  Box,
   Flex,
   Modal,
   ModalBody,
@@ -16,6 +15,7 @@ import {
 } from '@chakra-ui/react';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import TableDataView from '../components/data/TableDataView';
 import FileUploader from '../components/files/FileUploader';
 import EmptyTableState, { NoFilesState } from '../components/workspace/EmptyTableState';
 import TablesSidebar from '../components/workspace/TablesSidebar';
@@ -117,6 +117,19 @@ const WorkspacePage: React.FC = () => {
     onClose();
   };
 
+  // Helper function to get table name from selected table ID
+  const getSelectedTableName = () => {
+    if (!selectedTableId) return null;
+    const selectedFile = files.find(file => file.id === selectedTableId);
+    return selectedFile ? selectedFile.table_name : null;
+  };
+
+  const getSelectedFileName = () => {
+    if (!selectedTableId) return null;
+    const selectedFile = files.find(file => file.id === selectedTableId);
+    return selectedFile ? selectedFile.filename : null;
+  };
+
   if (loading) {
     return (
       <Flex minH="100vh" align="center" justify="center">
@@ -164,10 +177,11 @@ const WorkspacePage: React.FC = () => {
         ) : files.length === 0 ? (
           <NoFilesState onUploadClick={onOpen} />
         ) : selectedTableId ? (
-          <Box flex={1} p={6}>
-            {/* Table content will go here */}
-            <Box>Table content for ID: {selectedTableId}</Box>
-          </Box>
+          <TableDataView
+            workspaceId={workspaceId || ''}
+            tableId={selectedTableId}
+            tableName={getSelectedTableName() || getSelectedFileName() || 'Unknown Table'}
+          />
         ) : (
           <EmptyTableState onUploadClick={onOpen} />
         )}
