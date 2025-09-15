@@ -76,9 +76,11 @@ export const workspaceApi = {
     return response.data;
   },
   
-  executeQuery: async (workspaceId: string, query: string): Promise<QueryResult> => {
-    const response = await apiClient.post(`/v1/workspaces/${workspaceId}/query`, {
+  executeQuery: async (workspaceId: string, query: string, signal?: AbortSignal): Promise<QueryResult> => {
+    const response = await apiClient.post(`/v1/workspaces/${workspaceId}/query/`, {
       query
+    }, {
+      signal
     });
     return response.data;
   },
