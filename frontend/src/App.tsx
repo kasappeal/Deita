@@ -19,7 +19,7 @@ function App() {
   return (
     <Box minH="100vh" bg="gray.50">
       <Header />
-      <Container maxW="container.xl" py={8}>
+      <Container maxW="container.xl" p={0}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/workspaces/:workspaceId" element={<WorkspacePage />} />
