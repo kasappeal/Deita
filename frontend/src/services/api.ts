@@ -40,4 +40,35 @@ apiClient.interceptors.response.use(
   }
 )
 
+// Type definitions
+export interface FileData {
+  id: string;
+  filename: string;
+  size: number;
+  table_name: string;
+  csv_metadata?: Record<string, unknown>;
+  uploaded_at: string;
+}
+
+export interface TableData {
+  id: string;
+  name: string;
+  slug: string;
+  rows: number;
+  columns: number;
+}
+
+// API functions
+export const workspaceApi = {
+  getFiles: async (workspaceId: string): Promise<FileData[]> => {
+    const response = await apiClient.get(`/v1/workspaces/${workspaceId}/files`);
+    return response.data;
+  },
+  
+  getTables: async (workspaceId: string): Promise<TableData[]> => {
+    const response = await apiClient.get(`/v1/workspaces/${workspaceId}/tables`);
+    return response.data;
+  },
+};
+
 export default apiClient
