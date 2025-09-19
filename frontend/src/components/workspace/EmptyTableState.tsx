@@ -34,7 +34,7 @@ const EmptyTableState: React.FC<EmptyTableStateProps> = () => {
             Select a table to explore
           </Heading>
           <Text color="gray.500" fontSize="md" lineHeight={1.6}>
-            Choose a table from the sidebar to view and analyze your data
+            Or ask what you want to know.
           </Text>
         </VStack>
       </VStack>

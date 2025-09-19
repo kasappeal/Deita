@@ -1,3 +1,11 @@
+
+import FileUploader from '@/components/files/FileUploader';
+import QueryResultTable, { QueryResultData } from '@/components/query/QueryResultTable';
+import QueryRunner from '@/components/query/QueryRunner';
+import EmptyTableState, { NoFilesState } from '@/components/workspace/EmptyTableState';
+import TablesSidebar from '@/components/workspace/TablesSidebar';
+import { useAuth } from '@/contexts/AuthContext';
+import apiClient, { FileData, workspaceApi } from '@/services/api';
 import {
   Alert,
   AlertIcon,
@@ -15,12 +23,6 @@ import {
 } from '@chakra-ui/react';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import TableDataView from '../components/data/TableDataView';
-import FileUploader from '../components/files/FileUploader';
-import EmptyTableState, { NoFilesState } from '../components/workspace/EmptyTableState';
-import TablesSidebar from '../components/workspace/TablesSidebar';
-import { useAuth } from '../contexts/AuthContext';
-import apiClient, { FileData, workspaceApi } from '../services/api';
 
 interface Workspace {
   id: string;
@@ -39,11 +41,15 @@ const WorkspacePage: React.FC = () => {
   const [workspace, setWorkspaceLocal] = useState<Workspace | null>(null);
   const [files, setFiles] = useState<FileData[]>([]);
   const [selectedTableId, setSelectedTableId] = useState<string | undefined>();
+  const [query, setQuery] = useState<string>('');
+  const [runQuerySignal, setRunQuerySignal] = useState<number>(0);
+  const [queryResult, setQueryResult] = useState<QueryResultData | null>(null);
   const { setWorkspace } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [autoOpenUpload, setAutoOpenUpload] = useState(false);
   const toast = useToast();
+
 
   // Fetch workspace data
   useEffect(() => {
@@ -117,17 +123,15 @@ const WorkspacePage: React.FC = () => {
     onClose();
   };
 
-  // Helper function to get table name from selected table ID
-  const getSelectedTableName = () => {
-    if (!selectedTableId) return null;
-    const selectedFile = files.find(file => file.id === selectedTableId);
-    return selectedFile ? selectedFile.table_name : null;
-  };
 
-  const getSelectedFileName = () => {
-    if (!selectedTableId) return null;
-    const selectedFile = files.find(file => file.id === selectedTableId);
-    return selectedFile ? selectedFile.filename : null;
+
+  // When a table is selected, write SELECT query and run it
+  const handleTableSelect = (tableId: string) => {
+    setSelectedTableId(tableId);
+    const selectedFile = files.find(file => file.id === tableId);
+    const tableName = selectedFile?.table_name || selectedFile?.filename?.replace(/\.[^/.]+$/, '') || 'unknown_table';
+    setQuery(`SELECT * FROM "${tableName}"`);
+    setRunQuerySignal(s => s + 1);
   };
 
   if (loading) {
@@ -153,6 +157,16 @@ const WorkspacePage: React.FC = () => {
 
   return (
     <VStack spacing={0} align="stretch" minH="100vh">
+      {/* SQL Query Runner */}
+      {workspaceId && (
+        <QueryRunner 
+          workspaceId={workspaceId} 
+          query={query}
+          setQuery={setQuery}
+          runQuerySignal={runQuerySignal}
+          onResult={setQueryResult}
+        />
+      )}
       {/* Main Content */}
       <Flex flex={1}>
         {/* Show files loading or files sidebar */}
@@ -164,7 +178,7 @@ const WorkspacePage: React.FC = () => {
           <TablesSidebar 
             files={files} 
             selectedTableId={selectedTableId}
-            onTableSelect={setSelectedTableId}
+            onTableSelect={handleTableSelect}
             onUploadClick={onOpen}
           />
         ) : null}
@@ -176,12 +190,8 @@ const WorkspacePage: React.FC = () => {
           </Flex>
         ) : files.length === 0 ? (
           <NoFilesState onUploadClick={onOpen} />
-        ) : selectedTableId ? (
-          <TableDataView
-            workspaceId={workspaceId || ''}
-            tableId={selectedTableId}
-            tableName={getSelectedTableName() || getSelectedFileName() || 'Unknown Table'}
-          />
+        ) : queryResult ? (
+          <QueryResultTable result={queryResult} />
         ) : (
           <EmptyTableState onUploadClick={onOpen} />
         )}
