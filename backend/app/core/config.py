@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     # === DuckDB Configuration ===
     duckdb_path: str = Field(default="/app/data/analytics.duckdb", alias="DUCKDB_PATH")
+    duckdb_page_size: int = Field(default=50, alias="DUCKDB_PAGE_SIZE")
 
     # === Object Storage (MinIO/S3) ===
     s3_endpoint: str = Field(default="http://minio:9000", alias="S3_ENDPOINT")

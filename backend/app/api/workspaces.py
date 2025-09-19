@@ -3,37 +3,90 @@ Workspace management API routes.
 """
 import uuid
 
+import boto3
+from botocore.client import Config
 from fastapi import APIRouter, Depends, UploadFile, status
-from minio import Minio
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user, get_current_user_optional
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.models import User
+from app.schemas import QueryRequest, WorkspaceCreate, WorkspaceUpdate
 from app.schemas import Workspace as WorkspaceSchema
-from app.schemas import WorkspaceCreate, WorkspaceUpdate
 from app.schemas.file import File as FileSchema
+from app.schemas.query import QueryResult
+from app.services.exceptions import BadQuery, WorkspaceNotFound
 from app.services.file_storage import FileStorage
+from app.services.query_service import QueryService
 from app.services.workspace_service import WorkspaceService
 
 
 def get_workspace_service(db: Session = Depends(get_db)) -> WorkspaceService:
     settings = get_settings()
-    minio_client = Minio(
-        settings.s3_endpoint.replace('http://', '').replace('https://', ''),
-        access_key=settings.s3_access_key,
-        secret_key=settings.s3_secret_key,
-        secure=settings.s3_endpoint.startswith('https://'),
+    s3_client = boto3.client(
+        's3',
+        endpoint_url=settings.s3_endpoint,
+        aws_access_key_id=settings.s3_access_key,
+        aws_secret_access_key=settings.s3_secret_key,
+        config=Config(signature_version='s3v4'),
+        verify=settings.s3_endpoint.startswith('https://')
     )
-    file_storage = FileStorage(settings=settings, client=minio_client)
+    file_storage = FileStorage(settings=settings, client=s3_client)
     return WorkspaceService(db, file_storage=file_storage, settings=settings)
+
+
+def get_query_service() -> QueryService:
+    settings = get_settings()
+    return QueryService(settings)
 
 
 router = APIRouter()
 
 
-@router.post("/{workspace_id}/files/", status_code=status.HTTP_201_CREATED, include_in_schema=False)
+@router.post("/{workspace_id}/query/", status_code=status.HTTP_200_OK)
+async def execute_query(
+    workspace_id: uuid.UUID,
+    query_request: QueryRequest,
+    page: int = 1,
+    current_user: User | None = Depends(get_current_user_optional),
+    workspace_service: WorkspaceService = Depends(get_workspace_service),
+    query_service: QueryService = Depends(get_query_service),
+):
+    """
+    Execute SQL query against a workspace's data.
+
+    The query must be a SELECT or WITH statement, and a limit of 50 rows will be enforced.
+    """
+    try:
+        # Try to get the workspace
+        workspace = workspace_service.get_workspace_by_id(workspace_id)
+
+        # Check access rights
+        if not workspace.is_public and (not current_user or not workspace_service.is_owner(workspace, current_user)):
+            # Return null query for private workspaces when user is not the owner
+            return QueryResult(columns=[], rows=[], time=0.0)
+
+        # Get all files in the workspace
+        files = workspace_service.list_workspace_files(workspace, current_user)
+
+        # Validate the query
+        result = query_service.execute_query(query_request.query, files, page) # type: ignore
+
+        # Return the sanitized query
+        return result
+    except WorkspaceNotFound:
+        # If workspace doesn't exist, return null query
+        return QueryResult(columns=[], rows=[], time=0.0)
+    except BadQuery:
+        return QueryResult(columns=[], rows=[], time=0.0)
+    except Exception as e:
+        # Log the error and return null query for other errors
+        print(f"Error executing query: {str(e)}")
+        return QueryResult(columns=[], rows=[], time=0.0)
+
+
+@router.post("/{workspace_id}/files", status_code=status.HTTP_201_CREATED, include_in_schema=False)
 async def upload_file(
     workspace_id: uuid.UUID,
     file: UploadFile,

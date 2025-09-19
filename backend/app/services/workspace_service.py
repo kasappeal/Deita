@@ -1,9 +1,12 @@
 """
 WorkspaceService: Encapsulates business logic for workspace and file operations.
 """
+import csv
+import io
 import os
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 import magic
 from fastapi import UploadFile
@@ -140,13 +143,17 @@ class WorkspaceService:
         file_size = len(contents)
         self._validate_file_size(workspace, file_size)
         # Ensure workspace.id is a UUID, not a SQLAlchemy column
-        workspace_uuid = uuid.UUID(str(workspace.id)) if not isinstance(workspace.id, uuid.UUID) else workspace.id
         self._validate_workspace_storage(workspace, file_size)
         filename = file.filename or ""
         mime_type = file.content_type or ""
+
+        # Validate file type and extract CSV metadata
         self._validate_file_type(filename, mime_type, contents)
-        storage_path = self._save_file_to_storage(workspace_uuid, contents)
-        file_record = self._create_file_record(workspace, filename, storage_path, file_size)
+        csv_metadata = self._extract_csv_metadata(contents)
+
+        storage_path = self._save_file_to_storage(contents)
+        file_record = self._create_file_record(workspace, filename, storage_path, file_size, csv_metadata)
+
         # Increment workspace.storage_used and persist
         workspace.storage_used += file_size # type: ignore
         self.db.commit()
@@ -177,21 +184,55 @@ class WorkspaceService:
         if magic_type not in ["text/csv", "application/csv", "text/plain"]:
             raise FileTypeNotAllowed("Only CSV files are allowed")
 
-    def _save_file_to_storage(self, workspace_id: uuid.UUID, contents: bytes) -> str:
-        object_name = f"{workspace_id}_{uuid.uuid4()}.csv"
+    def _extract_csv_metadata(self, contents: bytes) -> dict[str, Any]:
+        """
+        Extract metadata from a CSV file including delimiter, quotechar, and headers.
+        Raises FileTypeNotAllowed if the file cannot be parsed as a valid CSV.
+        """
+        try:
+            # Try to detect the CSV dialect and extract headers
+            csv_text = contents.decode("utf-8")
+            sniffer = csv.Sniffer()
+            dialect = sniffer.sniff(csv_text[:min(10000, len(csv_text))])
+
+            # Parse the CSV with the detected dialect
+            f = io.StringIO(csv_text)
+            reader = csv.reader(f, dialect)
+            headers = next(reader, [])
+
+            # Check if we have valid headers
+            if not headers:
+                raise FileTypeNotAllowed("CSV file has no headers")
+
+            # Return metadata
+            return {
+                "delimiter": dialect.delimiter,
+                "quotechar": dialect.quotechar,
+                "headers": headers,
+                "has_header": sniffer.has_header(csv_text[:min(10000, len(csv_text))])
+            }
+        except (csv.Error, UnicodeDecodeError) as e:
+            raise FileTypeNotAllowed(f"Invalid CSV file: {str(e)}") from e
+
+    def _save_file_to_storage(self, contents: bytes) -> str:
+        object_name = f"{uuid.uuid4()}.csv"
         url = self.file_storage.save(object_name, contents, content_type="text/csv")
         return url
 
     def _get_name_without_extension(self, filename: str) -> str:
         return os.path.splitext(filename)[0]
 
-    def _create_file_record(self, workspace: Workspace, filename: str, storage_path: str, file_size: int) -> FileModel:
+    def _create_file_record(self, workspace: Workspace, filename: str, storage_path: str, file_size: int, metadata: dict[str, Any] | None = None) -> FileModel:
+        id_str = storage_path.split("/")[-1].split(".")[-2]
+        id = uuid.UUID(id_str) if not isinstance(id_str, uuid.UUID) else id_str
         file_record = FileModel(
+            id=id,
             workspace_id=workspace.id,
             table_name=self._get_name_without_extension(filename),
             filename=filename,
             storage_path=storage_path,
             size=file_size,
+            csv_metadata=metadata
         )
         self.db.add(file_record)
         self.db.commit()

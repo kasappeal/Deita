@@ -4,6 +4,7 @@ Pydantic schemas for File model (upload, response).
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -19,6 +20,7 @@ class FileCreate(BaseModel):
 class File(FileBase):
     id: uuid.UUID
     table_name: str
+    csv_metadata: dict[str, Any] | None = None
     uploaded_at: datetime
 
     model_config = {"from_attributes": True}
