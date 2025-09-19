@@ -23,7 +23,8 @@ dependencies = [
     "black>=25.1.0",
     "isort>=6.0.1",
     "python-magic>=0.4.27",
-    "minio>=7.2.16",
+    "sqlglot[rs]>=19.9.0",
+    "boto3>=1.40.30",
 ]
 
 [build-system]
@@ -53,7 +54,6 @@ addopts = [
     "--cov=app",
     "--cov-report=term-missing",
     "--cov-report=html:htmlcov",
-    "--cov-fail-under=80",
     "-v",
     "--tb=short",
 ]

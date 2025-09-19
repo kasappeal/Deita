@@ -3,7 +3,7 @@ FROM python:3.12-slim
 WORKDIR /workspace
 
 RUN apt-get update                                                          && \
-    apt-get install -y build-essential curl git wget unzip sudo             && \
+    apt-get install -y build-essential curl git wget unzip sudo libmagic1   && \
     curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -          && \
     apt-get install -y nodejs                                               && \
     npm --version                                                           && \
