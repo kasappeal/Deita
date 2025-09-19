@@ -19,6 +19,7 @@ from app.services.workspace_service import WorkspaceService
 
 
 class TestWorkspaceService:
+
     @pytest.fixture(autouse=True)
     def setup(self):
         self.db = MagicMock()
@@ -87,9 +88,11 @@ class TestWorkspaceService:
         file.content_type = "text/csv"
         file.file = MagicMock()
         file.file.read.return_value = b"col1,col2\n1,2"
-        self.file_storage.save.return_value = "http://url"
+        # Generate a valid UUID and use it in the storage path
+        valid_uuid = str(uuid.uuid4())
+        self.file_storage.save.return_value = f"{valid_uuid}.csv"
         with patch("app.services.workspace_service.magic.from_buffer", return_value="text/csv"):
-            with patch("app.services.workspace_service.uuid.uuid4", return_value=uuid.uuid4()):
+            with patch("app.services.workspace_service.uuid.uuid4", return_value=uuid.UUID(valid_uuid)):
                 with patch("app.services.workspace_service.FileModel", autospec=True) as FileModelMock:
                     file_record = MagicMock()
                     FileModelMock.return_value = file_record
@@ -148,3 +151,4 @@ class TestWorkspaceService:
         with pytest.raises(WorkspaceNotFound):
             self.service.upload_file(self.workspace, file, self.user)
 
+    
