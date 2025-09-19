@@ -8,7 +8,7 @@ const Header: React.FC = () => {
   const { workspace } = useAuth();
   return (
     <Box bg="white" shadow="sm" borderBottom="1px" borderColor="gray.200">
-      <Flex maxW="full" mx="auto" px={4} py={4} justify="space-between" align="center">
+      <Flex maxW="full" mx="auto" p={4} justify="space-between" align="center">
         {/* Logo */}
         <ChakraLink as={RouterLink} to="/" _hover={{ textDecoration: 'none' }}>
           <Heading as="h1" size="lg" color="blue.600">
@@ -17,7 +17,7 @@ const Header: React.FC = () => {
         </ChakraLink>
 
         {/* Workspace name at right */}
-        <HStack spacing={6}>
+        <HStack>
           {workspace && (
             <>
               <Text fontWeight="bold" color="gray.700" fontSize="md" data-testid="workspace-header-name">
