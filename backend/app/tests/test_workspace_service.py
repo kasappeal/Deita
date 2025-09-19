@@ -151,4 +151,3 @@ class TestWorkspaceService:
         with pytest.raises(WorkspaceNotFound):
             self.service.upload_file(self.workspace, file, self.user)
 
-    
