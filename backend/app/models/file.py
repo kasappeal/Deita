@@ -4,7 +4,7 @@ File model for uploaded files in a workspace.
 
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
@@ -20,6 +20,7 @@ class File(Base):
     filename = Column(String, nullable=False)
     storage_path = Column(String, nullable=False)
     size = Column(Integer, nullable=False)
+    csv_metadata = Column(JSON, nullable=True)
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
