@@ -8,9 +8,11 @@ from app.core.config import Settings
 from app.models import User, Workspace
 from app.schemas import WorkspaceCreate, WorkspaceUpdate
 from app.services.exceptions import (
+    FileNotFound,
     FileTooLarge,
     FileTypeNotAllowed,
     WorkspaceAlreadyClaimed,
+    WorkspaceForbidden,
     WorkspaceNotFound,
     WorkspaceQuotaExceeded,
 )
@@ -150,4 +152,121 @@ class TestWorkspaceService:
         file.file.read.return_value = b"abc"
         with pytest.raises(WorkspaceNotFound):
             self.service.upload_file(self.workspace, file, self.user)
+
+    def test_delete_file_success_public_workspace(self):
+        """Test successful file deletion in a public workspace by any user"""
+        from app.models.file import File as FileModel
+
+        # Set up public workspace
+        self.workspace.is_public = True
+        self.workspace.is_private = False
+        self.workspace.storage_used = 1000
+
+        # Create mock file
+        file_id = uuid.uuid4()
+        file_record = MagicMock(spec=FileModel)
+        file_record.id = file_id
+        file_record.size = 100
+        file_record.storage_path = f"{file_id}.csv"
+
+        # Mock DB query to return the file
+        self.db.query.return_value.filter.return_value.first.return_value = file_record
+
+        # Call delete_file
+        self.service.delete_file(self.workspace, file_id, None)  # No user (anonymous)
+
+        # Verify file storage deletion was called
+        self.file_storage.delete.assert_called_once_with(f"{file_id}.csv")
+
+        # Verify workspace storage was decremented
+        assert self.workspace.storage_used == 900
+
+        # Verify file record was deleted from DB
+        self.db.delete.assert_called_once_with(file_record)
+        self.db.commit.assert_called()
+
+    def test_delete_file_success_private_workspace_owner(self):
+        """Test successful file deletion in a private workspace by the owner"""
+        from app.models.file import File as FileModel
+
+        # Set up private workspace
+        self.workspace.is_public = False
+        self.workspace.is_private = True
+        self.workspace.owner_id = self.user.id
+        self.workspace.storage_used = 500
+
+        # Create mock file
+        file_id = uuid.uuid4()
+        file_record = MagicMock(spec=FileModel)
+        file_record.id = file_id
+        file_record.size = 200
+        file_record.storage_path = f"{file_id}.csv"
+
+        # Mock DB query to return the file
+        self.db.query.return_value.filter.return_value.first.return_value = file_record
+
+        # Call delete_file as owner
+        self.service.delete_file(self.workspace, file_id, self.user)
+
+        # Verify file storage deletion was called
+        self.file_storage.delete.assert_called_once_with(f"{file_id}.csv")
+
+        # Verify workspace storage was decremented
+        assert self.workspace.storage_used == 300
+
+        # Verify file record was deleted from DB
+        self.db.delete.assert_called_once_with(file_record)
+        self.db.commit.assert_called()
+
+    def test_delete_file_not_found(self):
+        """Test file deletion when file doesn't exist"""
+        file_id = uuid.uuid4()
+
+        # Mock DB query to return None (file not found)
+        self.db.query.return_value.filter.return_value.first.return_value = None
+
+        # Call delete_file and expect FileNotFound exception with file ID
+        with pytest.raises(FileNotFound, match=f"File not found: {file_id}"):
+            self.service.delete_file(self.workspace, file_id, self.user)
+
+    def test_delete_file_private_workspace_forbidden_no_user(self):
+        """Test file deletion forbidden in private workspace when no user"""
+        from app.models.file import File as FileModel
+
+        # Set up private workspace
+        self.workspace.is_public = False
+        self.workspace.is_private = True
+
+        # Create mock file
+        file_id = uuid.uuid4()
+        file_record = MagicMock(spec=FileModel)
+        file_record.id = file_id
+
+        # Mock DB query to return the file
+        self.db.query.return_value.filter.return_value.first.return_value = file_record
+
+        # Call delete_file without user and expect forbidden
+        with pytest.raises(WorkspaceForbidden, match="Not authorized to delete files in this workspace"):
+            self.service.delete_file(self.workspace, file_id, None)
+
+    def test_delete_file_private_workspace_forbidden_wrong_user(self):
+        """Test file deletion forbidden in private workspace when user is not owner"""
+        from app.models.file import File as FileModel
+
+        # Set up private workspace with different owner
+        self.workspace.is_public = False
+        self.workspace.is_private = True
+        self.workspace.owner_id = 999  # Different from self.user.id (which is 1)
+
+        # Create mock file
+        file_id = uuid.uuid4()
+        file_record = MagicMock(spec=FileModel)
+        file_record.id = file_id
+
+        # Mock DB query to return the file
+        self.db.query.return_value.filter.return_value.first.return_value = file_record
+
+        # Call delete_file with wrong user and expect forbidden
+        with pytest.raises(WorkspaceForbidden, match="Not authorized to delete files in this workspace"):
+            self.service.delete_file(self.workspace, file_id, self.user)
 

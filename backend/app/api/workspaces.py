@@ -155,6 +155,19 @@ async def list_workspace_files(
     return files
 
 
+@router.delete("/{workspace_id}/files/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_file(
+    workspace_id: uuid.UUID,
+    file_id: uuid.UUID,
+    current_user: User | None = Depends(get_current_user_optional),
+    service: WorkspaceService = Depends(get_workspace_service),
+):
+    """Delete a file from a workspace."""
+    workspace = service.get_workspace_by_id(workspace_id)
+    service.delete_file(workspace, file_id, current_user)
+    return None
+
+
 @router.put("/{workspace_id}", response_model=WorkspaceSchema)
 async def update_workspace(
     workspace_id: uuid.UUID,

@@ -27,6 +27,9 @@ class FileTypeNotAllowed(BadRequestException):
 class FileTooLarge(BadRequestException):
     pass
 
+class FileNotFound(NotFoundException):
+    pass
+
 class WorkspaceOrphanModification(BadRequestException):
     pass
 
