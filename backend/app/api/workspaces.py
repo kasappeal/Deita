@@ -5,7 +5,7 @@ import uuid
 
 import boto3
 from botocore.client import Config
-from fastapi import APIRouter, Depends, UploadFile, status
+from fastapi import APIRouter, Body, Depends, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user, get_current_user_optional
@@ -44,11 +44,12 @@ def get_query_service() -> QueryService:
 router = APIRouter()
 
 
-@router.post("/{workspace_id}/query/", status_code=status.HTTP_200_OK)
+@router.post("/{workspace_id}/query", status_code=status.HTTP_200_OK)
 async def execute_query(
     workspace_id: uuid.UUID,
     query_request: QueryRequest,
     page: int = 1,
+    count: bool = False,
     current_user: User | None = Depends(get_current_user_optional),
     workspace_service: WorkspaceService = Depends(get_workspace_service),
     query_service: QueryService = Depends(get_query_service),
@@ -71,7 +72,7 @@ async def execute_query(
         files = workspace_service.list_workspace_files(workspace, current_user)
 
         # Validate the query
-        result = query_service.execute_query(query_request.query, files, page) # type: ignore
+        result = query_service.execute_query(query_request.query, files, page, count) # type: ignore
 
         # Return the sanitized query
         return result
@@ -90,16 +91,14 @@ async def execute_query(
 async def upload_file(
     workspace_id: uuid.UUID,
     file: UploadFile,
+    overwrite: bool = Body(default=False),
     current_user: User | None = Depends(get_current_user_optional),
     service: WorkspaceService = Depends(get_workspace_service),
 ):
-    """Upload a CSV file to a workspace with security and validation."""
+    """Upload a CSV file to a workspace with security and validation. Duplicate/overwrite logic is handled in the service."""
     workspace = service.get_workspace_by_id(workspace_id)
-    file_record = service.upload_file(workspace, file, current_user)
-    # Get the updated workspace with refreshed storage_used
+    file_record = service.upload_file(workspace, file, current_user, overwrite=overwrite)
     updated_workspace = service.get_workspace_by_id(workspace_id)
-
-    # Return both the file info and updated workspace info
     return {
         "file": FileSchema.model_validate(file_record),
         "workspace": WorkspaceSchema.model_validate(updated_workspace)

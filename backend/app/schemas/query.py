@@ -14,3 +14,4 @@ class QueryResult(BaseModel):
     columns: list[str]
     rows: list[list]
     time: float
+    has_more: bool = False

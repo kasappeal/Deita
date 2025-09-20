@@ -18,6 +18,7 @@ from app.models import User, Workspace
 from app.models.file import File as FileModel
 from app.schemas import WorkspaceCreate, WorkspaceUpdate
 from app.services.exceptions import (
+    BadRequestException,
     FileTooLarge,
     FileTypeNotAllowed,
     WorkspaceAlreadyClaimed,
@@ -128,7 +129,7 @@ class WorkspaceService:
 
         # For private workspaces, only the owner can see files
         if workspace.is_private:
-            if user and workspace.owner_id == user.id:
+            if user and workspace.owner_id == user.id: # type: ignore
                 return self.db.query(FileModel).filter(FileModel.workspace_id == workspace.id).all()
             else:
                 # Return empty list if no auth user or user is not the owner
@@ -137,24 +138,27 @@ class WorkspaceService:
         # Fallback to empty list for any other case
         return []
 
-    def upload_file(self, workspace: Workspace, file: UploadFile, user: User | None) -> FileModel:
+    def upload_file(self, workspace: Workspace, file: UploadFile, user: User | None, overwrite: bool = False) -> FileModel:
         self._validate_file_permissions(workspace, user)
+        filename = file.filename or ""
+        # Check for duplicate filename in workspace
+        existing_files = self.db.query(FileModel).filter(FileModel.workspace_id == workspace.id, FileModel.filename == filename).all()
+        if existing_files:
+            if not overwrite:
+                raise BadRequestException(f"File '{filename}' already exists in this workspace.")
+            # If overwrite, delete the old file record(s)
+            for f in existing_files:
+                self.db.delete(f)
+            self.db.commit()
         contents = file.file.read()
         file_size = len(contents)
         self._validate_file_size(workspace, file_size)
-        # Ensure workspace.id is a UUID, not a SQLAlchemy column
         self._validate_workspace_storage(workspace, file_size)
-        filename = file.filename or ""
         mime_type = file.content_type or ""
-
-        # Validate file type and extract CSV metadata
         self._validate_file_type(filename, mime_type, contents)
         csv_metadata = self._extract_csv_metadata(contents)
-
         storage_path = self._save_file_to_storage(contents)
         file_record = self._create_file_record(workspace, filename, storage_path, file_size, csv_metadata)
-
-        # Increment workspace.storage_used and persist
         workspace.storage_used += file_size # type: ignore
         self.db.commit()
         self.db.refresh(workspace)
@@ -223,14 +227,15 @@ class WorkspaceService:
         return os.path.splitext(filename)[0]
 
     def _create_file_record(self, workspace: Workspace, filename: str, storage_path: str, file_size: int, metadata: dict[str, Any] | None = None) -> FileModel:
-        id_str = storage_path.split("/")[-1].split(".")[-2]
+        id_str, extension = storage_path.lower().split("/")[-1].split(".")
+        extension = extension if '?' not in extension else extension.split('?')[0]
         id = uuid.UUID(id_str) if not isinstance(id_str, uuid.UUID) else id_str
         file_record = FileModel(
             id=id,
             workspace_id=workspace.id,
             table_name=self._get_name_without_extension(filename),
             filename=filename,
-            storage_path=storage_path,
+            storage_path=f'{id_str}.{extension}',
             size=file_size,
             csv_metadata=metadata
         )
