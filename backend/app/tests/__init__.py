@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -69,8 +71,8 @@ class APITest:
             self.TEST_DATABASE_URL, connect_args={"check_same_thread": False}
         )
 
-    @pytest.fixture(autouse=True, scope="function")
-    def setup(self, db_engine):
+    @pytest.fixture(scope="function", autouse=True)
+    def setup_method(self, db_engine):
         self.client = TestClient(app)
         TestSession = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
         self.db = TestSession()
@@ -79,3 +81,7 @@ class APITest:
         yield
         Base.metadata.drop_all(bind=db_engine)
         self.db.close()
+        # Remove the sqlite file after test
+        db_path = self.TEST_DATABASE_URL.replace("sqlite:///", "")
+        if os.path.exists(db_path):
+            os.remove(db_path)
