@@ -2,6 +2,8 @@
 Query service for validating and executing SQL queries.
 """
 
+import time
+
 import duckdb
 from sqlglot import ParseError, TokenError, parse_one, to_table
 from sqlglot.expressions import (
@@ -60,7 +62,7 @@ class QueryService:
 
     def _add_limit(self, expr: Expression, page: int = 1) -> Expression:
         """Add a LIMIT 50 to the query if not already present."""
-        return expr.limit(self.settings.duckdb_page_size).offset(page * self.settings.duckdb_page_size) # type: ignore
+        return expr.limit(self.settings.duckdb_page_size + 1).offset((page - 1) * self.settings.duckdb_page_size) # type: ignore
 
     def _get_all_expression_items(self, expression: Expression) -> list[Expression]:
         # https://github.com/tobymao/sqlglot/blob/main/posts/ast_primer.md#scope
@@ -95,7 +97,7 @@ class QueryService:
                 table_name = item.name
                 if table_name not in tables_map:
                     raise BadQuery(f"Table '{table_name}' does not exist in the workspace.")
-                matching_file = tables_map[table_name]
+                matching_file = tables_map[table_name] # type: ignore
                 item.replace(to_table(self._get_read_csv_calls_for_file(matching_file)))
                 # TODO: add alias to the table
         return expression
@@ -120,23 +122,30 @@ class QueryService:
     def _execute_ducbkdb(self, sql: str) -> QueryResult:
         print(sql)
         con = self._get_connection()
+        start_time = time.perf_counter()
         result = con.sql(sql)
-        res = QueryResult(
+        rows = result.fetchall()
+        elapsed_time = time.perf_counter() - start_time
+        query_result = QueryResult(
             columns=result.columns,
-            rows=result.fetchall(),
-            time=0.0,  # TODO: measure execution time
+            rows=rows[:self.settings.duckdb_page_size],
+            has_more=len(rows) > self.settings.duckdb_page_size,
+            time=elapsed_time
         )
         con.close()
-        return res
+        return query_result
 
-    def execute_query(self, query: str, files: list[File], page: int = 1) -> QueryResult:
+    def execute_query(self, query: str, files: list[File], page: int | None = None, count: bool = False) -> QueryResult:
         if files is None:
             files = []
         try:
+            if count:
+                query = f"SELECT COUNT(*) AS count FROM ({query}) arctic_monkeys"
             expression = parse_one(query)
             expression = self._validate_query_and_map_tables(expression, files)
-            sanitized = self._add_limit(expression, page)
-            sql = sanitized.sql(dialect="duckdb")
+            if page:
+                expression = self._add_limit(expression, page)
+            sql = expression.sql(dialect="duckdb")
             print(sql)
             return self._execute_ducbkdb(sql)
         except (ParseError, TokenError) as e:
