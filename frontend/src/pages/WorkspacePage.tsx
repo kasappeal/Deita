@@ -206,6 +206,7 @@ const WorkspacePage: React.FC = () => {
           <ModalBody pb={6}>
             <FileUploader 
               workspaceId={workspaceId || ''} 
+              existingFiles={files}
               onUploadComplete={handleUploadComplete}
             />
           </ModalBody>

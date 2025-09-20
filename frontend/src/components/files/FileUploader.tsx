@@ -1,15 +1,15 @@
 import {
-    Box,
-    Button,
-    HStack,
-    Icon,
-    Progress,
-    Text,
-    useToast,
-    VStack
+  Box,
+  Button,
+  HStack,
+  Icon,
+  Progress,
+  Text,
+  useToast,
+  VStack
 } from '@chakra-ui/react';
 import React, { useCallback, useRef, useState } from 'react';
-import { FiCheckCircle, FiUploadCloud, FiXCircle } from 'react-icons/fi';
+import { FiAlertTriangle, FiCheckCircle, FiUploadCloud, FiXCircle } from 'react-icons/fi';
 import apiClient from '../../services/api';
 
 interface Workspace {
@@ -23,8 +23,18 @@ interface Workspace {
   storage_used?: number;
 }
 
+interface WorkspaceFile {
+  id: string;
+  filename: string;
+  size: number;
+  table_name: string;
+  csv_metadata?: Record<string, unknown>;
+  uploaded_at: string;
+}
+
 interface FileUploaderProps {
   workspaceId: string;
+  existingFiles?: WorkspaceFile[];
   onUploadComplete?: (updatedWorkspace?: Workspace) => void;
 }
 
@@ -35,37 +45,38 @@ interface UploadingFile {
   error?: string;
 }
 
-const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, onUploadComplete }) => {
+const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, existingFiles = [], onUploadComplete }) => {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [currentFileToConfirm, setCurrentFileToConfirm] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropAreaRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
 
-  const uploadFile = useCallback(async (file: File) => {
-    // Check if file is CSV
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      toast({
-        title: 'Invalid file type',
-        description: 'Only CSV files are allowed',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    // Add file to uploading list
-    const newFile: UploadingFile = {
-      file,
-      progress: 0,
-      status: 'uploading',
-    };
-    
-    setUploadingFiles(prev => [...prev, newFile]);
+  const uploadFile = useCallback(async (file: File, overwrite: boolean = false) => {
+    // Check if file is already in uploading list (from confirmation), otherwise add it
+    setUploadingFiles(prev => {
+      const existingFile = prev.find(f => f.file === file);
+      if (existingFile) {
+        // File is already in the list (from confirmation), just keep it
+        return prev;
+      } else {
+        // Add new file to uploading list
+        const newFile: UploadingFile = {
+          file,
+          progress: 0,
+          status: 'uploading',
+        };
+        return [...prev, newFile];
+      }
+    });
 
     // Create form data
     const formData = new FormData();
     formData.append('file', file);
+    if (overwrite) {
+      formData.append('overwrite', 'true');
+    }
 
     try {
       const response = await apiClient.post(`/v1/workspaces/${workspaceId}/files/`, formData, {
@@ -130,14 +141,107 @@ const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, onUploadComple
     }
   }, [workspaceId, toast, onUploadComplete]);
 
+  // Process multiple files, handling duplicates one by one
+  const processFiles = useCallback((files: File[]) => {
+    const validFiles = files.filter(file => {
+      // Check if file is CSV
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        toast({
+          title: 'Invalid file type',
+          description: `${file.name} is not a CSV file. Only CSV files are allowed.`,
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        return false;
+      }
+      return true;
+    });
+
+    // Set pending files and start processing the first one
+    if (validFiles.length > 0) {
+      setPendingFiles(validFiles.slice(1)); // Store remaining files
+      const [currentFile] = validFiles;
+      
+      // Check if file already exists
+      const existingFile = existingFiles.find(f => f.filename === currentFile.name);
+      if (existingFile) {
+        // Add file to uploading list with "pending" status
+        const pendingFile: UploadingFile = {
+          file: currentFile,
+          progress: 0,
+          status: 'uploading', // Will show as uploading while waiting for confirmation
+        };
+        setUploadingFiles(prev => [...prev, pendingFile]);
+        
+        // Show confirmation for this file
+        setCurrentFileToConfirm(currentFile);
+      } else {
+        // Upload immediately
+        uploadFile(currentFile, false);
+        // Continue with remaining files
+        if (validFiles.length > 1) {
+          // Recursively process remaining files
+          setTimeout(() => processFiles(validFiles.slice(1)), 0);
+        }
+      }
+    }
+  }, [existingFiles, toast, uploadFile]);
+
+  const processNextFile = useCallback(() => {
+    if (pendingFiles.length > 0) {
+      const [nextFile, ...remainingFiles] = pendingFiles;
+      setPendingFiles(remainingFiles);
+      
+      // Check if file already exists
+      const existingFile = existingFiles.find(f => f.filename === nextFile.name);
+      if (existingFile) {
+        // Add file to uploading list with "pending" status
+        const pendingFile: UploadingFile = {
+          file: nextFile,
+          progress: 0,
+          status: 'uploading', // Will show as uploading while waiting for confirmation
+        };
+        setUploadingFiles(prev => [...prev, pendingFile]);
+        
+        // Show confirmation for this file
+        setCurrentFileToConfirm(nextFile);
+      } else {
+        // Upload immediately and continue
+        uploadFile(nextFile, false);
+        // Continue with remaining files
+        setTimeout(() => processNextFile(), 0);
+      }
+    }
+  }, [pendingFiles, existingFiles, uploadFile]);
+
+  const handleConfirmOverwrite = useCallback(() => {
+    if (currentFileToConfirm) {
+      uploadFile(currentFileToConfirm, true);
+      setCurrentFileToConfirm(null);
+      
+      // Continue processing remaining files
+      processNextFile();
+    }
+  }, [currentFileToConfirm, uploadFile, processNextFile]);
+
+  const handleCancelOverwrite = useCallback(() => {
+    if (currentFileToConfirm) {
+      // Remove the cancelled file from uploading list
+      setUploadingFiles(prev => prev.filter(f => f.file !== currentFileToConfirm));
+      setCurrentFileToConfirm(null);
+      
+      // Continue processing remaining files (skip the cancelled one)
+      processNextFile();
+    }
+  }, [currentFileToConfirm, processNextFile]);
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
     
-    // Process each selected file
-    Array.from(files).forEach(file => {
-      uploadFile(file);
-    });
+    // Process all selected files
+    processFiles(Array.from(files));
     
     // Reset the file input
     if (fileInputRef.current) {
@@ -157,19 +261,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, onUploadComple
     
     // Handle dropped files
     if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
-      Array.from(event.dataTransfer.files).forEach(file => {
-        if (file.name.toLowerCase().endsWith('.csv')) {
-          uploadFile(file);
-        } else {
-          toast({
-            title: 'Invalid file type',
-            description: 'Only CSV files are allowed',
-            status: 'error',
-            duration: 5000,
-            isClosable: true,
-          });
-        }
-      });
+      processFiles(Array.from(event.dataTransfer.files));
     }
     
     // Reset drag effect styles
@@ -177,7 +269,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, onUploadComple
       dropAreaRef.current.style.borderColor = '';
       dropAreaRef.current.style.backgroundColor = '';
     }
-  }, [toast, uploadFile]);
+  }, [processFiles]);
 
   const handleDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -248,13 +340,16 @@ const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, onUploadComple
 
       {uploadingFiles.length > 0 && (
         <VStack spacing={4} align="stretch" width="100%">
-        {uploadingFiles.map((file, index) => (
+        {uploadingFiles.map((file, index) => {
+          const isWaitingForConfirmation = currentFileToConfirm === file.file;
+          return (
             <Box key={index} p={3} borderWidth="1px" borderRadius="md" bg="white">
                 <HStack mb={2} justify="space-between">
                     <Text noOfLines={1} maxW="70%">{file.file.name}</Text>
                     <HStack>
                     <Text fontSize="sm">
-                        {file.status === 'completed' ? '100%' : `${file.progress}%`}
+                        {isWaitingForConfirmation ? 'Waiting for confirmation' :
+                         file.status === 'completed' ? '100%' : `${file.progress}%`}
                     </Text>
                     {file.status === 'completed' && (
                         <Icon as={FiCheckCircle} color="green.500" />
@@ -262,12 +357,15 @@ const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, onUploadComple
                     {file.status === 'error' && (
                         <Icon as={FiXCircle} color="red.500" />
                     )}
+                    {isWaitingForConfirmation && (
+                        <Icon as={FiAlertTriangle} color="orange.500" />
+                    )}
                     </HStack>
                 </HStack>
                 <Progress 
-                    value={file.status === 'completed' ? 100 : file.progress} 
+                    value={isWaitingForConfirmation ? 0 : file.status === 'completed' ? 100 : file.progress} 
                     size="sm" 
-                    colorScheme={file.status === 'error' ? 'red' : 'green'} 
+                    colorScheme={file.status === 'error' ? 'red' : isWaitingForConfirmation ? 'orange' : 'green'} 
                     borderRadius="full"
                 />
                 {file.error && (
@@ -276,9 +374,46 @@ const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, onUploadComple
                     </Text>
                 )}
             </Box>
-        ))}
+          );
+        })}
         </VStack>
       )}
+
+      {/* Inline Overwrite Confirmation */}
+      {currentFileToConfirm && (
+        <Box
+          w="100%"
+          p={4}
+          borderWidth="2px"
+          borderRadius="md"
+          borderColor="orange.400"
+          bg="orange.50"
+          _dark={{
+            bg: "orange.900",
+            borderColor: "orange.500"
+          }}
+        >
+          <HStack spacing={3} mb={3}>
+            <Icon as={FiAlertTriangle} color="orange.500" boxSize={5} />
+            <Text fontWeight="bold" color="orange.700" _dark={{ color: "orange.200" }}>
+              File Already Exists
+            </Text>
+          </HStack>
+          <Text mb={4} color="gray.700" _dark={{ color: "gray.300" }}>
+            A file named <strong>{currentFileToConfirm.name}</strong> already exists in this workspace.
+            Do you want to overwrite it?
+          </Text>
+          <HStack spacing={3}>
+            <Button size="sm" onClick={handleCancelOverwrite} variant="outline">
+              Cancel
+            </Button>
+            <Button size="sm" colorScheme="red" onClick={handleConfirmOverwrite}>
+              Overwrite
+            </Button>
+          </HStack>
+        </Box>
+      )}
+
     </VStack>
   );
 };
