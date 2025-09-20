@@ -5,7 +5,6 @@ from unittest.mock import Mock
 
 import pytest
 
-from app.services.exceptions import BadQuery
 from app.services.query_service import QueryService
 
 
@@ -98,7 +97,7 @@ class TestQueryService:
 #     def test_complex_cte_exploitation_attempts(self):
 #         queries = [
 #             # Multi-level data extraction
-#             """WITH 
+#             """WITH
 # users_data AS (SELECT * FROM users),
 # admin_data AS (SELECT * FROM admin_users),
 # combined AS (

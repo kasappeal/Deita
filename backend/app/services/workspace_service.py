@@ -19,6 +19,7 @@ from app.models.file import File as FileModel
 from app.schemas import WorkspaceCreate, WorkspaceUpdate
 from app.services.exceptions import (
     BadRequestException,
+    FileNotFound,
     FileTooLarge,
     FileTypeNotAllowed,
     WorkspaceAlreadyClaimed,
@@ -243,3 +244,36 @@ class WorkspaceService:
         self.db.commit()
         self.db.refresh(file_record)
         return file_record
+
+    def delete_file(self, workspace: Workspace, file_id: uuid.UUID, user: User | None) -> None:
+        """Delete a file from a workspace, respecting access permissions."""
+        # Get the file and verify it belongs to the workspace
+        file_record = self.db.query(FileModel).filter(
+            FileModel.id == file_id,
+            FileModel.workspace_id == workspace.id
+        ).first()
+
+        if not file_record:
+            raise FileNotFound(f"File not found: {file_id}")
+
+        # Check permissions based on workspace visibility
+        if workspace.is_public:
+            # For public workspaces, anyone can delete files
+            pass
+        elif workspace.is_private:
+            # For private workspaces, only owner can delete files
+            if not user or workspace.owner_id != user.id: # type: ignore
+                raise WorkspaceForbidden("Not authorized to delete files in this workspace")
+        else:
+            # For any other case, deny access
+            raise WorkspaceForbidden("Not authorized to delete files in this workspace")
+
+        # Delete file from storage
+        self.file_storage.delete(file_record.storage_path) # type: ignore
+
+        # Update workspace storage_used
+        workspace.storage_used -= file_record.size  # type: ignore
+
+        # Delete file record from database
+        self.db.delete(file_record)
+        self.db.commit()

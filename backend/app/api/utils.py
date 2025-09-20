@@ -3,7 +3,7 @@ Utility functions for workspace API operations.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -52,5 +52,5 @@ def can_modify_workspace(workspace: Workspace, current_user: User | None) -> boo
 
 def update_last_accessed(db: Session, workspace: Workspace):
     """Update workspace last_accessed_at timestamp."""
-    workspace.last_accessed_at = datetime.now(timezone.utc)
+    workspace.last_accessed_at = datetime.now(UTC)
     db.commit()
