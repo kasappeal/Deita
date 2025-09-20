@@ -6,6 +6,7 @@ import Header from './components/common/Header'
 import { useAuth } from './contexts/AuthContext'
 import HomePage from './pages/HomePage'
 import WorkspacePage from './pages/WorkspacePage'
+import WorkspacesRedirectPage from './pages/WorkspacesRedirectPage'
 
 function App() {
   const { workspace } = useAuth();
@@ -22,6 +23,7 @@ function App() {
       <Container maxW="full" p={0}>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/workspaces" element={<WorkspacesRedirectPage />} />
           <Route path="/workspaces/:workspaceId" element={<WorkspacePage />} />
         </Routes>
       </Container>
