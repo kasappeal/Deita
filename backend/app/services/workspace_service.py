@@ -249,7 +249,7 @@ class WorkspaceService:
         ).first()
 
         if not file_record:
-            raise FileNotFound("File not found")
+            raise FileNotFound(f"File not found: {file_id}")
 
         # Check permissions based on workspace visibility
         if workspace.is_public:

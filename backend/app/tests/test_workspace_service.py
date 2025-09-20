@@ -225,8 +225,8 @@ class TestWorkspaceService:
         # Mock DB query to return None (file not found)
         self.db.query.return_value.filter.return_value.first.return_value = None
 
-        # Call delete_file and expect FileNotFound exception
-        with pytest.raises(FileNotFound, match="File not found"):
+        # Call delete_file and expect FileNotFound exception with file ID
+        with pytest.raises(FileNotFound, match=f"File not found: {file_id}"):
             self.service.delete_file(self.workspace, file_id, self.user)
 
     def test_delete_file_private_workspace_forbidden_no_user(self):
