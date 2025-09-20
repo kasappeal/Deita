@@ -19,10 +19,16 @@ from app.services.workspace_service import WorkspaceService
 
 
 class TestWorkspaceService:
-
     @pytest.fixture(autouse=True)
     def setup(self):
         self.db = MagicMock()
+        # Mock the query chain for file existence checks
+        query_mock = MagicMock()
+        filter_mock = MagicMock()
+        query_mock.filter.return_value = filter_mock
+        filter_mock.all.return_value = []  # No existing files by default
+        self.db.query.return_value = query_mock
+
         self.file_storage = MagicMock(spec=FileStorage)
         self.settings = MagicMock(spec=Settings)
         self.settings.owned_workspace_max_file_size = 1000
@@ -91,33 +97,50 @@ class TestWorkspaceService:
         # Generate a valid UUID and use it in the storage path
         valid_uuid = str(uuid.uuid4())
         self.file_storage.save.return_value = f"{valid_uuid}.csv"
-        with patch("app.services.workspace_service.magic.from_buffer", return_value="text/csv"):
-            with patch("app.services.workspace_service.uuid.uuid4", return_value=uuid.UUID(valid_uuid)):
-                with patch("app.services.workspace_service.FileModel", autospec=True) as FileModelMock:
-                    file_record = MagicMock()
-                    FileModelMock.return_value = file_record
-                    result = self.service.upload_file(self.workspace, file, self.user)
-                    assert result == file_record
-                    self.db.add.assert_called()
-                    self.db.commit.assert_called()
-                    self.db.refresh.assert_called()
+
+        with patch(
+            "app.services.workspace_service.magic.from_buffer", return_value="text/csv"
+        ):
+            with patch.object(
+                self.service,
+                "_extract_csv_metadata",
+                return_value={"columns": ["col1", "col2"], "rows": 1},
+            ):
+                with patch.object(
+                    self.service,
+                    "_save_file_to_storage",
+                    return_value=f"{valid_uuid}.csv",
+                ):
+                    with patch.object(
+                        self.service, "_create_file_record"
+                    ) as mock_create_file:
+                        file_record = MagicMock()
+                        mock_create_file.return_value = file_record
+                        result = self.service.upload_file(
+                            self.workspace, file, self.user
+                        )
+                        assert result == file_record
+                        self.db.commit.assert_called()
+                        self.db.refresh.assert_called()
 
     def test_upload_file_too_large(self):
         file = MagicMock(spec=UploadFile)
         file.filename = "test.csv"
         file.content_type = "text/csv"
         file.file = MagicMock()
-        file.file.read.return_value = b"x" * 2000
+        file.file.read.return_value = b"x" * 2000  # Larger than max_file_size (1000)
+
         with pytest.raises(FileTooLarge):
             self.service.upload_file(self.workspace, file, self.user)
 
     def test_upload_file_storage_exceeded(self):
-        self.workspace.storage_used = 10000
+        self.workspace.storage_used = 10000  # Already at max storage limit
         file = MagicMock(spec=UploadFile)
         file.filename = "test.csv"
         file.content_type = "text/csv"
         file.file = MagicMock()
-        file.file.read.return_value = b"x" * 10
+        file.file.read.return_value = b"x" * 10  # Any additional size will exceed limit
+
         with pytest.raises(WorkspaceQuotaExceeded):
             self.service.upload_file(self.workspace, file, self.user)
 
@@ -127,6 +150,7 @@ class TestWorkspaceService:
         file.content_type = "text/plain"
         file.file = MagicMock()
         file.file.read.return_value = b"abc"
+
         with pytest.raises(FileTypeNotAllowed):
             self.service.upload_file(self.workspace, file, self.user)
 
@@ -136,7 +160,11 @@ class TestWorkspaceService:
         file.content_type = "text/csv"
         file.file = MagicMock()
         file.file.read.return_value = b"abc"
-        with patch("app.services.workspace_service.magic.from_buffer", return_value="application/pdf"):
+
+        with patch(
+            "app.services.workspace_service.magic.from_buffer",
+            return_value="application/pdf",
+        ):
             with pytest.raises(FileTypeNotAllowed):
                 self.service.upload_file(self.workspace, file, self.user)
 
@@ -150,4 +178,3 @@ class TestWorkspaceService:
         file.file.read.return_value = b"abc"
         with pytest.raises(WorkspaceNotFound):
             self.service.upload_file(self.workspace, file, self.user)
-
