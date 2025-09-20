@@ -149,8 +149,7 @@ class WorkspaceService:
                 raise BadRequestException(f"File '{filename}' already exists in this workspace.")
             # If overwrite, delete the old file record(s)
             for f in existing_files:
-                self.db.delete(f)
-            self.db.commit()
+                self.delete_file(workspace, f.id, user) # type: ignore
         contents = file.file.read()
         file_size = len(contents)
         self._validate_file_size(workspace, file_size)
