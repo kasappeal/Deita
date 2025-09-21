@@ -1,15 +1,20 @@
 """
 Workspace management API routes.
 """
+import csv
+import io
+import time
 import uuid
+from collections.abc import Iterator
 
 import boto3
 from botocore.client import Config
 from fastapi import APIRouter, Body, Depends, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user, get_current_user_optional
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.models import User
 from app.schemas import QueryRequest, WorkspaceCreate, WorkspaceUpdate
@@ -53,6 +58,7 @@ async def execute_query(
     current_user: User | None = Depends(get_current_user_optional),
     workspace_service: WorkspaceService = Depends(get_workspace_service),
     query_service: QueryService = Depends(get_query_service),
+    settings: Settings = Depends(get_settings)
 ):
     """
     Execute SQL query against a workspace's data.
@@ -72,9 +78,17 @@ async def execute_query(
         files = workspace_service.list_workspace_files(workspace, current_user)
 
         # Validate the query
-        result = query_service.execute_query(query_request.query, files, page, count) # type: ignore
+        result = query_service.execute_query(
+            query_request.query,
+            files,
+            page,
+            count=count,
+            size=settings.duckdb_page_size + 1
+        ) # type: ignore
 
-        # Return the sanitized query
+        # Trim results to page size and determine if there are more results
+        result.has_more = len(result.rows) > settings.duckdb_page_size
+        result.rows = result.rows[:settings.duckdb_page_size]
         return result
     except WorkspaceNotFound:
         # If workspace doesn't exist, return null query
@@ -85,6 +99,68 @@ async def execute_query(
         # Log the error and return null query for other errors
         print(f"Error executing query: {str(e)}")
         return QueryResult(columns=[], rows=[], time=0.0)
+
+
+@router.post("/{workspace_id}/query/csv", status_code=status.HTTP_200_OK)
+async def export_query_csv(
+    workspace_id: uuid.UUID,
+    query_request: QueryRequest,
+    current_user: User | None = Depends(get_current_user_optional),
+    workspace_service: WorkspaceService = Depends(get_workspace_service),
+    query_service: QueryService = Depends(get_query_service),
+):
+    """
+    Execute SQL query against a workspace's data and return results as streaming CSV.
+
+    The query must be a SELECT or WITH statement. Uses the same validation logic
+    as the regular query endpoint but streams CSV data directly without pagination.
+    """
+    def generate_csv_stream(query: str, files) -> Iterator[str]:
+        """Generate CSV data as an iterator for streaming response."""
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Execute query without pagination to get all results for CSV export
+        page = 1
+        headers_set = False
+        while page is not None:
+            result = query_service.execute_query(query, files, page=page, size=100000)
+            if not headers_set:
+                # Write header
+                writer.writerow(result.columns)
+
+            for row in result.rows:
+                writer.writerow(row)
+                yield output.getvalue()
+                output.seek(0)
+                output.truncate(0)
+
+            if result.has_more:
+                page += 1
+            else:
+                page = None
+
+    # Try to get the workspace
+    workspace = workspace_service.get_workspace_by_id(workspace_id)
+
+    # Check access rights (same logic as execute_query)
+    if not workspace.is_public and (not current_user or not workspace_service.is_owner(workspace, current_user)):
+        # Return empty CSV for private workspaces when user is not the owner
+        return []
+
+    # Get all files in the workspace
+    files = workspace_service.list_workspace_files(workspace, current_user)
+
+    # Generate filename based on workspace and timestamp
+    timestamp = int(time.time())
+    filename = f"query_export_{workspace_id}_{timestamp}.csv"
+
+    # Return streaming CSV response
+    return StreamingResponse(
+        generate_csv_stream(query_request.query, files),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 @router.post("/{workspace_id}/files", status_code=status.HTTP_201_CREATED, include_in_schema=False)
