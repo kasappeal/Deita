@@ -62,6 +62,7 @@ export interface QueryResult {
   columns: string[];
   rows: (string | number | boolean | null)[][];
   time: number;
+  has_more: boolean;
 }
 
 // API functions
@@ -76,11 +77,20 @@ export const workspaceApi = {
     return response.data;
   },
   
-  executeQuery: async (workspaceId: string, query: string, signal?: AbortSignal): Promise<QueryResult> => {
-    const response = await apiClient.post(`/v1/workspaces/${workspaceId}/query/`, {
+  executeQuery: async (workspaceId: string, query: string, page: number = 1, signal?: AbortSignal, count?: boolean): Promise<QueryResult> => {
+    const countParam = count ? '&count=true' : '';
+    const response = await apiClient.post(`/v1/workspaces/${workspaceId}/query/?page=${page}${countParam}`, {
       query
     }, {
       signal
+    });
+    return response.data;
+  },
+
+  exportQueryAsCsv: async (workspaceId: string, query: string): Promise<Blob> => {
+    const response = await apiClient.post(`/v1/workspaces/${workspaceId}/query/csv`, {query}, {
+      responseType: 'blob',
+      timeout: 0 // 120000, // 2 minutes timeout for export operations
     });
     return response.data;
   },
