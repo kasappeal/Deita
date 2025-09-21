@@ -60,9 +60,9 @@ class QueryService:
     def __init__(self, settings: Settings):
         self.settings = settings
 
-    def _add_limit(self, expr: Expression, page: int = 1) -> Expression:
+    def _add_limit(self, expr: Expression, page: int = 1, size: int | None = None) -> Expression:
         """Add a LIMIT 50 to the query if not already present."""
-        return expr.limit(self.settings.duckdb_page_size + 1).offset((page - 1) * self.settings.duckdb_page_size) # type: ignore
+        return expr.limit(size).offset((page - 1) * size) # type: ignore
 
     def _get_all_expression_items(self, expression: Expression) -> list[Expression]:
         # https://github.com/tobymao/sqlglot/blob/main/posts/ast_primer.md#scope
@@ -119,23 +119,17 @@ class QueryService:
         self._setup_s3(con)
         return con
 
-    def _execute_ducbkdb(self, sql: str) -> QueryResult:
-        print(sql)
+    def _execute_ducbkdb(self, sql: str) -> dict:
         con = self._get_connection()
-        start_time = time.perf_counter()
         result = con.sql(sql)
-        rows = result.fetchall()
-        elapsed_time = time.perf_counter() - start_time
-        query_result = QueryResult(
-            columns=result.columns,
-            rows=rows[:self.settings.duckdb_page_size],
-            has_more=len(rows) > self.settings.duckdb_page_size,
-            time=elapsed_time
-        )
+        res = {
+            'columns': result.columns,
+            'rows': result.fetchall()
+        }
         con.close()
-        return query_result
+        return res
 
-    def execute_query(self, query: str, files: list[File], page: int | None = None, count: bool = False) -> QueryResult:
+    def execute_query(self, query: str, files: list[File], page: int | None = None, size: int | None = None, count: bool = False) -> QueryResult:
         if files is None:
             files = []
         try:
@@ -143,11 +137,20 @@ class QueryService:
                 query = f"SELECT COUNT(*) AS count FROM ({query}) arctic_monkeys"
             expression = parse_one(query)
             expression = self._validate_query_and_map_tables(expression, files)
+            if size is None:
+                size = self.settings.duckdb_page_size
             if page:
-                expression = self._add_limit(expression, page)
+                expression = self._add_limit(expression, page, size)
             sql = expression.sql(dialect="duckdb")
             print(sql)
-            return self._execute_ducbkdb(sql)
+            start_time = time.perf_counter()
+            result = self._execute_ducbkdb(sql)
+            elapsed_time = time.perf_counter() - start_time
+            return QueryResult(
+                time=elapsed_time,
+                columns=result['columns'],
+                rows=result['rows']
+            )
         except (ParseError, TokenError) as e:
             # TODO: optimize exception handling to avoid showing raw error messages
             raise BadQuery("Invalid SQL query: {str(e)}") from e
