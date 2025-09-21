@@ -144,7 +144,7 @@ const WorkspacePage: React.FC = () => {
 
   if (loading) {
     return (
-      <Flex minH="100vh" align="center" justify="center">
+      <Flex flex={1} align="center" justify="center">
         <Spinner size="xl" color="blue.500" />
       </Flex>
     );
@@ -153,12 +153,12 @@ const WorkspacePage: React.FC = () => {
   if (!workspace) return null;
 
   return (
-    <VStack spacing={0} align="stretch" minH="100vh">
+    <VStack spacing={0} align="stretch" flex={1}>
       {/* Main Content */}
       <Flex flex={1} minH={0} align="stretch">
         {/* Show files loading or files sidebar */}
         {filesLoading ? (
-          <Flex minH="100vh" align="center" justify="center" width="300px">
+          <Flex flex={1} align="center" justify="center" width="300px">
             <Spinner size="lg" color="blue.500" />
           </Flex>
         ) : files.length > 0 ? (
@@ -186,7 +186,7 @@ const WorkspacePage: React.FC = () => {
           )}
           
           {filesLoading ? (
-            <Flex flex={1} minH="100vh" align="center" justify="center">
+            <Flex flex={1} align="center" justify="center">
               <Spinner size="xl" color="blue.500" />
             </Flex>
           ) : files.length === 0 ? (

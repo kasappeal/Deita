@@ -17,7 +17,6 @@ const EmptyTableState: React.FC<EmptyTableStateProps> = () => {
   return (
     <Flex
       flex={1}
-      minHeight="100vh"
       align="center"
       justify="center"
       bg="white"
@@ -47,7 +46,6 @@ export const NoFilesState: React.FC<EmptyTableStateProps> = ({ onUploadClick }) 
   return (
     <Flex
       flex={1}
-      minHeight="100vh"
       align="center"
       justify="center"
       bg="white"

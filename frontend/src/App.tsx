@@ -18,9 +18,9 @@ function App() {
     }
   }, [workspace]);
   return (
-    <Box minH="100vh" bg="gray.50">
+    <Box minH="100vh" bg="gray.50" display="flex" flexDirection="column">
       <Header />
-      <Container maxW="full" p={0}>
+      <Container maxW="full" p={0} flex={1} display="flex" flexDirection="column">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/workspaces" element={<WorkspacesRedirectPage />} />
