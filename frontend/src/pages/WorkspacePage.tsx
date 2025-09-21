@@ -1,14 +1,14 @@
 
 import FileUploader from '@/components/files/FileUploader';
-import QueryResultTable, { QueryResultData } from '@/components/query/QueryResultTable';
+import PaginatedQueryResult from '@/components/query/PaginatedQueryResult';
+import { QueryResultData } from '@/components/query/QueryResultTable';
 import QueryRunner from '@/components/query/QueryRunner';
 import EmptyTableState, { NoFilesState } from '@/components/workspace/EmptyTableState';
 import TablesSidebar from '@/components/workspace/TablesSidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import apiClient, { FileData, workspaceApi } from '@/services/api';
 import {
-  Alert,
-  AlertIcon,
+  Box,
   Flex,
   Modal,
   ModalBody,
@@ -22,7 +22,7 @@ import {
   VStack
 } from '@chakra-ui/react';
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 interface Workspace {
   id: string;
@@ -36,16 +36,17 @@ interface Workspace {
 
 const WorkspacePage: React.FC = () => {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [filesLoading, setFilesLoading] = useState(true);
   const [workspace, setWorkspaceLocal] = useState<Workspace | null>(null);
   const [files, setFiles] = useState<FileData[]>([]);
   const [selectedTableId, setSelectedTableId] = useState<string | undefined>();
   const [query, setQuery] = useState<string>('');
+  const [executedQuery, setExecutedQuery] = useState<string>('');
   const [runQuerySignal, setRunQuerySignal] = useState<number>(0);
   const [queryResult, setQueryResult] = useState<QueryResultData | null>(null);
   const { setWorkspace } = useAuth();
-  const [error, setError] = useState<string | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [autoOpenUpload, setAutoOpenUpload] = useState(false);
   const toast = useToast();
@@ -60,16 +61,16 @@ const WorkspacePage: React.FC = () => {
       .then(res => {
         setWorkspaceLocal(res.data);
         setWorkspace(res.data);
-        setError(null);
       })
       .catch(() => {
         setWorkspaceLocal(null);
         setWorkspace(null);
-        setError('Workspace not found.');
+        // Redirect to /workspaces when workspace doesn't exist
+        navigate('/workspaces', { replace: true });
       })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId]);
+  }, [workspaceId, navigate]);
 
   // Fetch files data
   useEffect(() => {
@@ -125,6 +126,13 @@ const WorkspacePage: React.FC = () => {
 
 
 
+  const handleQueryResult = (result: QueryResultData | null) => {
+    setQueryResult(result);
+    if (result !== null) {
+      setExecutedQuery(query);
+    }
+  };
+
   // When a table is selected, write SELECT query and run it
   const handleTableSelect = (tableId: string) => {
     setSelectedTableId(tableId);
@@ -142,17 +150,6 @@ const WorkspacePage: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <Flex minH="100vh" align="center" justify="center">
-        <Alert status="error">
-          <AlertIcon />
-          {error}
-        </Alert>
-      </Flex>
-    );
-  }
-
   if (!workspace) return null;
 
   return (
@@ -164,37 +161,45 @@ const WorkspacePage: React.FC = () => {
           query={query}
           setQuery={setQuery}
           runQuerySignal={runQuerySignal}
-          onResult={setQueryResult}
+          onResult={handleQueryResult}
         />
       )}
       {/* Main Content */}
-      <Flex flex={1}>
+      <Flex flex={1} minH={0} align="stretch">
         {/* Show files loading or files sidebar */}
         {filesLoading ? (
           <Flex minH="100vh" align="center" justify="center" width="300px">
             <Spinner size="lg" color="blue.500" />
           </Flex>
         ) : files.length > 0 ? (
-          <TablesSidebar 
-            files={files} 
-            selectedTableId={selectedTableId}
-            onTableSelect={handleTableSelect}
-            onUploadClick={onOpen}
-          />
+          <Box width="300px" flexShrink={0}>
+            <TablesSidebar 
+              files={files} 
+              selectedTableId={selectedTableId}
+              onTableSelect={handleTableSelect}
+              onUploadClick={onOpen}
+            />
+          </Box>
         ) : null}
 
         {/* Main Content Area */}
-        {filesLoading ? (
-          <Flex flex={1} minH="100vh" align="center" justify="center">
-            <Spinner size="xl" color="blue.500" />
-          </Flex>
-        ) : files.length === 0 ? (
-          <NoFilesState onUploadClick={onOpen} />
-        ) : queryResult ? (
-          <QueryResultTable result={queryResult} />
-        ) : (
-          <EmptyTableState onUploadClick={onOpen} />
-        )}
+        <Box flex={1} minW={0} display="flex" flexDirection="column">
+          {filesLoading ? (
+            <Flex flex={1} minH="100vh" align="center" justify="center">
+              <Spinner size="xl" color="blue.500" />
+            </Flex>
+          ) : files.length === 0 ? (
+            <NoFilesState onUploadClick={onOpen} />
+          ) : queryResult ? (
+            <PaginatedQueryResult 
+              workspaceId={workspaceId!}
+              query={executedQuery}
+              initialResult={queryResult}
+            />
+          ) : (
+            <EmptyTableState onUploadClick={onOpen} />
+          )}
+        </Box>
       </Flex>
 
       {/* Upload Modal */}

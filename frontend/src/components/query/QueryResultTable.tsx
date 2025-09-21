@@ -1,25 +1,27 @@
 import {
-    Box,
-    Table,
-    TableContainer,
-    Tbody,
-    Td,
-    Th,
-    Thead,
-    Tr
+  Box,
+  Table,
+  TableContainer,
+  Tbody,
+  Td,
+  Th,
+  Thead,
+  Tr
 } from '@chakra-ui/react';
 import React from 'react';
 
 export interface QueryResultData {
   columns: string[];
   rows: (string | number | boolean | null)[][];
+  has_more: boolean;
 }
 
 interface QueryResultTableProps {
   result: QueryResultData | null;
+  isLoading?: boolean | false;
 }
 
-const QueryResultTable: React.FC<QueryResultTableProps> = ({ result }) => {
+const QueryResultTable: React.FC<QueryResultTableProps> = ({ result, isLoading }) => {
   if (!result || !Array.isArray(result.rows) || !result.columns) return null;
   return (
     <Box bg="white" overflowX="auto" width={"100%"}>
