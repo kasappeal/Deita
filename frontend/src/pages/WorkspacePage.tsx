@@ -154,16 +154,6 @@ const WorkspacePage: React.FC = () => {
 
   return (
     <VStack spacing={0} align="stretch" minH="100vh">
-      {/* SQL Query Runner */}
-      {workspaceId && (
-        <QueryRunner 
-          workspaceId={workspaceId} 
-          query={query}
-          setQuery={setQuery}
-          runQuerySignal={runQuerySignal}
-          onResult={handleQueryResult}
-        />
-      )}
       {/* Main Content */}
       <Flex flex={1} minH={0} align="stretch">
         {/* Show files loading or files sidebar */}
@@ -184,6 +174,17 @@ const WorkspacePage: React.FC = () => {
 
         {/* Main Content Area */}
         <Box flex={1} minW={0} display="flex" flexDirection="column">
+          {/* SQL Query Runner */}
+          {workspaceId && files.length > 0 && (
+            <QueryRunner 
+              workspaceId={workspaceId} 
+              query={query}
+              setQuery={setQuery}
+              runQuerySignal={runQuerySignal}
+              onResult={handleQueryResult}
+            />
+          )}
+          
           {filesLoading ? (
             <Flex flex={1} minH="100vh" align="center" justify="center">
               <Spinner size="xl" color="blue.500" />
