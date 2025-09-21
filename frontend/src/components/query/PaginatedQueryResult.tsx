@@ -5,11 +5,12 @@ import {
   Flex,
   HStack,
   Icon,
+  IconButton,
   Text,
   useToast,
 } from '@chakra-ui/react';
 import React, { useEffect, useState } from 'react';
-import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiShare } from 'react-icons/fi';
 
 import QueryResultTable, { QueryResultData } from './QueryResultTable';
 
@@ -189,10 +190,11 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
         bg="gray.50"
       >
         <HStack spacing={2}>
-          <Button
+          <IconButton
+            aria-label="Previous results"
             size="sm"
             variant="outline"
-            leftIcon={<Icon as={FiChevronLeft} />}
+            icon={<Icon as={FiChevronLeft} />}
             isDisabled={currentPage === 1 || loading}
             onClick={handlePreviousPage}
           />
@@ -205,10 +207,11 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
           >
             {totalCount !== null ? totalCount.toLocaleString() : '?'}
           </Button>
-          <Button
+          <IconButton
             size="sm"
+            aria-label="Next results"
             variant="outline"
-            rightIcon={<Icon as={FiChevronRight} />}
+            icon={<Icon as={FiChevronRight} />}
             isDisabled={!result.has_more || loading}
             onClick={handleNextPage}
           />
@@ -222,6 +225,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
             size="sm"
             onClick={handleExport}
             isLoading={exporting}
+            leftIcon={<Icon as={FiShare} />}
             loadingText="Exporting..."
             isDisabled={loading}
           >
