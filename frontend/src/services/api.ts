@@ -79,7 +79,7 @@ export const workspaceApi = {
   
   executeQuery: async (workspaceId: string, query: string, page: number = 1, signal?: AbortSignal, count?: boolean): Promise<QueryResult> => {
     const countParam = count ? '&count=true' : '';
-    const response = await apiClient.post(`/v1/workspaces/${workspaceId}/query/?page=${page}${countParam}`, {
+    const response = await apiClient.post(`/v1/workspaces/${workspaceId}/query?page=${page}${countParam}`, {
       query
     }, {
       signal
@@ -91,6 +91,14 @@ export const workspaceApi = {
     const response = await apiClient.post(`/v1/workspaces/${workspaceId}/query/csv`, {query}, {
       responseType: 'blob',
       timeout: 0 // 120000, // 2 minutes timeout for export operations
+    });
+    return response.data;
+  },
+
+  saveQuery: async (workspaceId: string, name: string, query: string): Promise<{id: string, name: string, query: string, created_at: string}> => {
+    const response = await apiClient.post(`/v1/workspaces/${workspaceId}/queries`, {
+      name,
+      query
     });
     return response.data;
   },
