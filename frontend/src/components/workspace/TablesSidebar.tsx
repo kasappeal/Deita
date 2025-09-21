@@ -1,13 +1,13 @@
 import {
-  Box,
-  Button,
-  Card,
-  CardBody,
-  Flex,
-  Icon,
-  Stack,
-  Text,
-  VStack
+    Box,
+    Button,
+    Card,
+    CardBody,
+    Flex,
+    Icon,
+    Stack,
+    Text,
+    VStack
 } from '@chakra-ui/react';
 import React from 'react';
 import { FiDatabase, FiFile, FiPlus } from 'react-icons/fi';
@@ -61,7 +61,8 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
   return (
     <Box
       width="300px"
-      height="100vh"
+      minWidth="300px"
+      minH="100%"
       bg="gray.50"
       borderRight="1px"
       borderColor="gray.200"
@@ -69,6 +70,7 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
       overflow="auto"
       display="flex"
       flexDirection="column"
+      flexShrink={0}
     >
       <VStack align="stretch" spacing={2} flex={1}>
         <Button
