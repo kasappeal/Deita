@@ -21,7 +21,7 @@ interface QueryResultTableProps {
   isLoading?: boolean | false;
 }
 
-const QueryResultTable: React.FC<QueryResultTableProps> = ({ result, isLoading }) => {
+const QueryResultTable: React.FC<QueryResultTableProps> = ({ result }) => {
   if (!result || !Array.isArray(result.rows) || !result.columns) return null;
   return (
     <Box bg="white" overflowX="auto" width={"100%"}>
