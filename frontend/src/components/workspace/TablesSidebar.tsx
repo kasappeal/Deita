@@ -1,20 +1,21 @@
 import {
-    Box,
-    Button,
-    Card,
-    CardBody,
-    Divider,
-    Flex,
-    Icon,
-    IconButton,
-    Stack,
-    Text,
-    Tooltip,
-    VStack
+  Box,
+  Button,
+  Card,
+  CardBody,
+  Divider,
+  Flex,
+  Icon,
+  IconButton,
+  Stack,
+  Text,
+  Tooltip,
+  VStack
 } from '@chakra-ui/react';
 import React, { useState } from 'react';
-import { FiDatabase, FiFile, FiUpload, FiFolder, FiCode, FiZap } from 'react-icons/fi';
+import { FiCode, FiDatabase, FiFile, FiFolder, FiUpload, FiZap } from 'react-icons/fi';
 import { FileData } from '../../services/api';
+import ChatInterface from './ChatInterface';
 
 interface TableItem {
   id: string;
@@ -132,11 +133,7 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
           </Box>
         );
       case 'ai':
-        return (
-          <Box flex={1} p={4} textAlign="center">
-            <Text color="gray.500" fontSize="sm">AI assistance coming soon...</Text>
-          </Box>
-        );
+        return <ChatInterface />;
       default:
         return null;
     }
@@ -146,20 +143,21 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
     <Box
       width="300px"
       minWidth="300px"
-      minH="100%"
+      height="calc(100vh - 80px)"
+      maxHeight="calc(100vh - 80px)"
       bg="gray.50"
       borderRight="1px"
       borderColor="gray.200"
       p={4}
-      overflow="auto"
+      overflow="hidden"
       display="flex"
       flexDirection="column"
       flexShrink={0}
     >
-      <VStack align="stretch" spacing={2} flex={1}>
+      <VStack align="stretch" spacing={2} flex={1} minH={0}>
 
         {/* Tab Buttons */}
-        <Flex gap={1} justify="space-between">
+        <Flex gap={1} justify="space-between" flexShrink={0}>
           <Tooltip label="Tables and files" placement="bottom">
             <IconButton
               aria-label="Tables and files"
@@ -198,10 +196,18 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
         </Flex>
 
         {/* Separator */}
-        <Divider />
+        <Divider flexShrink={0} />
         
         {/* Tab Content */}
-        {renderTabContent()}
+        <Box 
+          flex={1} 
+          overflow={activeTab === 'ai' ? 'hidden' : 'auto'} 
+          minH={0}
+          display="flex"
+          flexDirection="column"
+        >
+          {renderTabContent()}
+        </Box>
 
       </VStack>
     </Box>

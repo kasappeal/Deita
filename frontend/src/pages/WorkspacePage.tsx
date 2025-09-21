@@ -153,9 +153,9 @@ const WorkspacePage: React.FC = () => {
   if (!workspace) return null;
 
   return (
-    <VStack spacing={0} align="stretch" flex={1}>
+    <VStack spacing={0} align="stretch" flex={1} minH={0}>
       {/* Main Content */}
-      <Flex flex={1} minH={0} align="stretch">
+      <Flex flex={1} minH={0} align="stretch" maxH="calc(100vh - 80px)">
         {/* Show files loading or files sidebar */}
         {filesLoading ? (
           <Flex flex={1} align="center" justify="center" width="300px">
@@ -173,7 +173,7 @@ const WorkspacePage: React.FC = () => {
         ) : null}
 
         {/* Main Content Area */}
-        <Box flex={1} minW={0} display="flex" flexDirection="column">
+        <Box flex={1} minW={0} display="flex" flexDirection="column" minH={0} overflow="hidden">
           {/* SQL Query Runner */}
           {workspaceId && files.length > 0 && (
             <QueryRunner 
@@ -192,11 +192,13 @@ const WorkspacePage: React.FC = () => {
           ) : files.length === 0 ? (
             <NoFilesState onUploadClick={onOpen} />
           ) : queryResult ? (
-            <PaginatedQueryResult 
-              workspaceId={workspaceId!}
-              query={executedQuery}
-              initialResult={queryResult}
-            />
+            <Box flex={1} minH={0} overflow="hidden">
+              <PaginatedQueryResult 
+                workspaceId={workspaceId!}
+                query={executedQuery}
+                initialResult={queryResult}
+              />
+            </Box>
           ) : (
             <EmptyTableState onUploadClick={onOpen} />
           )}
