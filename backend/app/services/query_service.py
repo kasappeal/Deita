@@ -98,7 +98,9 @@ class QueryService:
                 if table_name not in tables_map:
                     raise BadQuery(f"Table '{table_name}' does not exist in the workspace.")
                 matching_file = tables_map[table_name] # type: ignore
-                item.replace(to_table(self._get_read_csv_calls_for_file(matching_file)))
+                renamed_table = to_table(self._get_read_csv_calls_for_file(matching_file))
+                renamed_table.set("alias", item.alias) # preserve alias if exists
+                item.replace(renamed_table)
                 # TODO: add alias to the table
         return expression
 
@@ -142,7 +144,6 @@ class QueryService:
             if page:
                 expression = self._add_limit(expression, page, size)
             sql = expression.sql(dialect="duckdb")
-            print(sql)
             start_time = time.perf_counter()
             result = self._execute_ducbkdb(sql)
             elapsed_time = time.perf_counter() - start_time
