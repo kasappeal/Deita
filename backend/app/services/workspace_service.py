@@ -276,3 +276,87 @@ class WorkspaceService:
         # Delete file record from database
         self.db.delete(file_record)
         self.db.commit()
+
+    def save_query(self, workspace: Workspace, name: str, sql_text: str, user: User | None, ai_generated: bool = False):
+        """Save a query to a workspace."""
+        from app.models.query import Query
+
+        # Check permissions - both public and private workspaces allow query saving
+        # For private workspaces, only the owner can save queries
+        if workspace.is_private and (not user or workspace.owner_id != user.id):
+            raise WorkspaceForbidden("Not authorized to save queries in this workspace")
+
+        # Create query record
+        query = Query(
+            workspace_id=workspace.id,
+            name=name,
+            sql_text=sql_text,
+            ai_generated=ai_generated
+        )
+        self.db.add(query)
+        self.db.commit()
+        self.db.refresh(query)
+        return query
+
+    def list_queries(self, workspace: Workspace, user: User | None):
+        """List all queries in a workspace."""
+        from app.models.query import Query
+
+        # Check access permissions
+        if not self.can_access(workspace, user):
+            raise WorkspaceForbidden("Not authorized to access this workspace")
+
+        return self.db.query(Query).filter(Query.workspace_id == workspace.id).all()
+
+    def get_query(self, workspace: Workspace, query_id: uuid.UUID, user: User | None):
+        """Get a specific query by ID."""
+        from app.models.query import Query
+
+        # Check access permissions
+        if not self.can_access(workspace, user):
+            raise WorkspaceForbidden("Not authorized to access this workspace")
+
+        query = self.db.query(Query).filter(
+            Query.id == query_id,
+            Query.workspace_id == workspace.id
+        ).first()
+
+        if not query:
+            from app.services.exceptions import QueryNotFound
+            raise QueryNotFound(f"Query not found: {query_id}")
+
+        return query
+
+    def delete_query(self, workspace: Workspace, query_id: uuid.UUID, user: User | None) -> None:
+        """Delete a query from a workspace, respecting access permissions."""
+        from app.models.query import Query
+        from app.services.exceptions import QueryNotFound
+
+        # Get the query and verify it belongs to the workspace
+        query = self.db.query(Query).filter(
+            Query.id == query_id,
+            Query.workspace_id == workspace.id
+        ).first()
+
+        if not query:
+            raise QueryNotFound(f"Query not found: {query_id}")
+
+        # Check permissions based on workspace visibility
+        if workspace.is_public:
+            # For public workspaces without an owner, anyone can delete queries
+            if workspace.owner_id is not None:
+                # If workspace has an owner, only the owner can delete
+                if not user or workspace.owner_id != user.id:
+                    raise WorkspaceForbidden("Not authorized to delete queries in this workspace")
+        elif workspace.is_private:
+            # For private workspaces, only owner can delete queries
+            if not user or workspace.owner_id != user.id:
+                raise WorkspaceForbidden("Not authorized to delete queries in this workspace")
+        else:
+            # For any other case, deny access
+            raise WorkspaceForbidden("Not authorized to delete queries in this workspace")
+
+        # Delete query record from database
+        self.db.delete(query)
+        self.db.commit()
+

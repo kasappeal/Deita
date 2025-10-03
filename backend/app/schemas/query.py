@@ -1,6 +1,9 @@
 """
 Query schema definitions.
 """
+from datetime import datetime
+from uuid import UUID
+
 from pydantic import BaseModel
 
 
@@ -15,3 +18,23 @@ class QueryResult(BaseModel):
     rows: list[list]
     time: float
     has_more: bool = False
+
+
+class SaveQueryRequest(BaseModel):
+    """Schema for saving a query."""
+    name: str
+    query: str
+
+
+class SavedQuery(BaseModel):
+    """Schema for a saved query response."""
+    id: UUID
+    workspace_id: UUID
+    name: str
+    query: str
+    ai_generated: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+

@@ -20,8 +20,8 @@ from app.models import User
 from app.schemas import QueryRequest, WorkspaceCreate, WorkspaceUpdate
 from app.schemas import Workspace as WorkspaceSchema
 from app.schemas.file import File as FileSchema
-from app.schemas.query import QueryResult
-from app.services.exceptions import BadQuery, WorkspaceNotFound
+from app.schemas.query import QueryResult, SaveQueryRequest, SavedQuery
+from app.services.exceptions import BadQuery, QueryNotFound, WorkspaceNotFound
 from app.services.file_storage import FileStorage
 from app.services.query_service import QueryService
 from app.services.workspace_service import WorkspaceService
@@ -285,3 +285,55 @@ async def claim_workspace(
     workspace = service.get_workspace_by_id(workspace_id)
     service.claim_workspace(workspace, current_user)
     return None
+
+
+@router.post("/{workspace_id}/queries", response_model=SavedQuery, status_code=status.HTTP_201_CREATED)
+async def save_query(
+    workspace_id: uuid.UUID,
+    query_data: SaveQueryRequest,
+    current_user: User | None = Depends(get_current_user_optional),
+    service: WorkspaceService = Depends(get_workspace_service),
+):
+    """Save a query to a workspace."""
+    workspace = service.get_workspace_by_id(workspace_id)
+    query = service.save_query(workspace, query_data.name, query_data.query, current_user)
+    return SavedQuery.model_validate(query)
+
+
+@router.get("/{workspace_id}/queries", response_model=list[SavedQuery])
+async def list_queries(
+    workspace_id: uuid.UUID,
+    current_user: User | None = Depends(get_current_user_optional),
+    service: WorkspaceService = Depends(get_workspace_service),
+):
+    """List all queries in a workspace."""
+    workspace = service.get_workspace_by_id(workspace_id)
+    queries = service.list_queries(workspace, current_user)
+    return [SavedQuery.model_validate(q) for q in queries]
+
+
+@router.get("/{workspace_id}/queries/{query_id}", response_model=SavedQuery)
+async def get_query(
+    workspace_id: uuid.UUID,
+    query_id: uuid.UUID,
+    current_user: User | None = Depends(get_current_user_optional),
+    service: WorkspaceService = Depends(get_workspace_service),
+):
+    """Get a specific query by ID."""
+    workspace = service.get_workspace_by_id(workspace_id)
+    query = service.get_query(workspace, query_id, current_user)
+    return SavedQuery.model_validate(query)
+
+
+@router.delete("/{workspace_id}/queries/{query_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_query(
+    workspace_id: uuid.UUID,
+    query_id: uuid.UUID,
+    current_user: User | None = Depends(get_current_user_optional),
+    service: WorkspaceService = Depends(get_workspace_service),
+):
+    """Delete a query from a workspace."""
+    workspace = service.get_workspace_by_id(workspace_id)
+    service.delete_query(workspace, query_id, current_user)
+    return None
+
