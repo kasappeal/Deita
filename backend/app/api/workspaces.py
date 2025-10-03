@@ -21,6 +21,8 @@ from app.schemas import QueryRequest, WorkspaceCreate, WorkspaceUpdate
 from app.schemas import Workspace as WorkspaceSchema
 from app.schemas.file import File as FileSchema
 from app.schemas.query import QueryResult
+from app.schemas.saved_query import SavedQuery as SavedQuerySchema
+from app.schemas.saved_query import SaveQueryCreate
 from app.services.exceptions import BadQuery, WorkspaceNotFound
 from app.services.file_storage import FileStorage
 from app.services.query_service import QueryService
@@ -285,3 +287,28 @@ async def claim_workspace(
     workspace = service.get_workspace_by_id(workspace_id)
     service.claim_workspace(workspace, current_user)
     return None
+
+
+@router.post("/{workspace_id}/queries", response_model=SavedQuerySchema, status_code=status.HTTP_201_CREATED)
+async def save_query(
+    workspace_id: uuid.UUID,
+    query_data: SaveQueryCreate,
+    current_user: User | None = Depends(get_current_user_optional),
+    service: WorkspaceService = Depends(get_workspace_service),
+):
+    """Save a query to a workspace."""
+    workspace = service.get_workspace_by_id(workspace_id)
+    saved_query = service.save_query(workspace, query_data.name, query_data.query, current_user)
+    return saved_query
+
+
+@router.get("/{workspace_id}/queries", response_model=list[SavedQuerySchema])
+async def list_saved_queries(
+    workspace_id: uuid.UUID,
+    current_user: User | None = Depends(get_current_user_optional),
+    service: WorkspaceService = Depends(get_workspace_service),
+):
+    """List all saved queries in a workspace."""
+    workspace = service.get_workspace_by_id(workspace_id)
+    queries = service.list_saved_queries(workspace, current_user)
+    return queries

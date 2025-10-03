@@ -276,3 +276,48 @@ class WorkspaceService:
         # Delete file record from database
         self.db.delete(file_record)
         self.db.commit()
+
+    def save_query(self, workspace: Workspace, name: str, query: str, user: User | None):
+        """Save a query to the workspace."""
+        from app.models.saved_query import SavedQuery
+
+        # Check access permissions
+        if not self.can_access(workspace, user):
+            raise WorkspaceNotFound("Workspace not found")
+        
+        # For private workspaces, only the owner can save queries
+        if workspace.is_private and not self.is_owner(workspace, user):
+            raise WorkspaceForbidden("Not authorized to save queries in this workspace")
+
+        # Check for duplicate query name in workspace
+        existing_query = self.db.query(SavedQuery).filter(
+            SavedQuery.workspace_id == workspace.id,
+            SavedQuery.name == name
+        ).first()
+        
+        if existing_query:
+            raise BadRequestException(f"Query with name '{name}' already exists in this workspace")
+
+        # Create and save the query
+        saved_query = SavedQuery(
+            workspace_id=workspace.id,
+            name=name,
+            query=query
+        )
+        self.db.add(saved_query)
+        self.db.commit()
+        self.db.refresh(saved_query)
+        return saved_query
+
+    def list_saved_queries(self, workspace: Workspace, user: User | None):
+        """List all saved queries in a workspace."""
+        from app.models.saved_query import SavedQuery
+        
+        # Check access permissions
+        if not self.can_access(workspace, user):
+            raise WorkspaceNotFound("Workspace not found")
+
+        # Return all saved queries for the workspace
+        return self.db.query(SavedQuery).filter(
+            SavedQuery.workspace_id == workspace.id
+        ).order_by(SavedQuery.created_at.desc()).all()
