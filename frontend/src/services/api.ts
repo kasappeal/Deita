@@ -46,6 +46,7 @@ export interface FileData {
   filename: string;
   size: number;
   table_name: string;
+  row_count: number;
   csv_metadata?: Record<string, unknown>;
   uploaded_at: string;
 }

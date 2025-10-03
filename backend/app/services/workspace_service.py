@@ -156,9 +156,9 @@ class WorkspaceService:
         self._validate_workspace_storage(workspace, file_size)
         mime_type = file.content_type or ""
         self._validate_file_type(filename, mime_type, contents)
-        csv_metadata = self._extract_csv_metadata(contents)
+        csv_metadata, row_count = self._extract_csv_metadata(contents)
         storage_path = self._save_file_to_storage(contents)
-        file_record = self._create_file_record(workspace, filename, storage_path, file_size, csv_metadata)
+        file_record = self._create_file_record(workspace, filename, storage_path, file_size, csv_metadata, row_count)
         workspace.storage_used += file_size # type: ignore
         self.db.commit()
         self.db.refresh(workspace)
@@ -188,10 +188,11 @@ class WorkspaceService:
         if magic_type not in ["text/csv", "application/csv", "text/plain"]:
             raise FileTypeNotAllowed("Only CSV files are allowed")
 
-    def _extract_csv_metadata(self, contents: bytes) -> dict[str, Any]:
+    def _extract_csv_metadata(self, contents: bytes) -> tuple[dict[str, Any], int]:
         """
-        Extract metadata from a CSV file including delimiter, quotechar, and headers.
+        Extract metadata from a CSV file including delimiter, quotechar, headers, and row count.
         Raises FileTypeNotAllowed if the file cannot be parsed as a valid CSV.
+        Returns a tuple of (metadata_dict, row_count).
         """
         try:
             # Try to detect the CSV dialect and extract headers
@@ -208,13 +209,17 @@ class WorkspaceService:
             if not headers:
                 raise FileTypeNotAllowed("CSV file has no headers")
 
-            # Return metadata
-            return {
+            # Count the remaining rows (data rows, excluding header)
+            row_count = sum(1 for _ in reader)
+
+            # Return metadata and row count
+            metadata = {
                 "delimiter": dialect.delimiter,
                 "quotechar": dialect.quotechar,
                 "headers": headers,
                 "has_header": sniffer.has_header(csv_text[:min(10000, len(csv_text))])
             }
+            return metadata, row_count
         except (csv.Error, UnicodeDecodeError) as e:
             raise FileTypeNotAllowed(f"Invalid CSV file: {str(e)}") from e
 
@@ -226,7 +231,7 @@ class WorkspaceService:
     def _get_name_without_extension(self, filename: str) -> str:
         return os.path.splitext(filename)[0]
 
-    def _create_file_record(self, workspace: Workspace, filename: str, storage_path: str, file_size: int, metadata: dict[str, Any] | None = None) -> FileModel:
+    def _create_file_record(self, workspace: Workspace, filename: str, storage_path: str, file_size: int, metadata: dict[str, Any] | None = None, row_count: int = 0) -> FileModel:
         id_str, extension = storage_path.lower().split("/")[-1].split(".")
         extension = extension if '?' not in extension else extension.split('?')[0]
         id = uuid.UUID(id_str) if not isinstance(id_str, uuid.UUID) else id_str
@@ -237,6 +242,7 @@ class WorkspaceService:
             filename=filename,
             storage_path=f'{id_str}.{extension}',
             size=file_size,
+            row_count=row_count,
             csv_metadata=metadata
         )
         self.db.add(file_record)

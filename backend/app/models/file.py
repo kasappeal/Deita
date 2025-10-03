@@ -20,6 +20,7 @@ class File(Base):
     filename = Column(String, nullable=False)
     storage_path = Column(String, nullable=False)
     size = Column(Integer, nullable=False)
+    row_count = Column(Integer, nullable=False, default=0)
     csv_metadata = Column(JSON, nullable=True)
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
 

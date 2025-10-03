@@ -20,6 +20,7 @@ class FileCreate(BaseModel):
 class File(FileBase):
     id: uuid.UUID
     table_name: str
+    row_count: int
     csv_metadata: dict[str, Any] | None = None
     uploaded_at: datetime
 

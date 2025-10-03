@@ -92,9 +92,7 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
     id: file.id,
     name: getTableDisplayName(file.filename),
     fileName: file.filename,
-    rows: typeof file.csv_metadata?.rows === 'number' ? file.csv_metadata.rows 
-          : typeof file.csv_metadata?.row_count === 'number' ? file.csv_metadata.row_count 
-          : 0,
+    rows: file.row_count || 0,
     fileSize: formatFileSize(file.size),
   }));
 
