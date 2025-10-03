@@ -8,7 +8,7 @@ from app.tests import APITest
 
 
 class TestListWorkspaceFiles(APITest):
-    """Tests for GET /v1/workspaces/{workspace_id}/files endpoint."""
+    """Tests for GET /v1/workspaces/{workspace_id}/files/ endpoint."""
 
     def test_list_files_public_workspace_no_auth(self):
         """Test listing files in a public workspace without authentication."""
@@ -21,7 +21,7 @@ class TestListWorkspaceFiles(APITest):
         file2 = self._create_file_via_api(workspace_id, "data2.csv")
 
         # Request files without authentication
-        response = self.client.get(f"/v1/workspaces/{workspace_id}/files")
+        response = self.client.get(f"/v1/workspaces/{workspace_id}/files/")
 
         assert response.status_code == 200
         data = response.json()
@@ -53,7 +53,7 @@ class TestListWorkspaceFiles(APITest):
 
         # Request files with authentication
         headers = self._get_auth_headers(user)
-        response = self.client.get(f"/v1/workspaces/{workspace_id}/files", headers=headers)
+        response = self.client.get(f"/v1/workspaces/{workspace_id}/files/", headers=headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -73,7 +73,7 @@ class TestListWorkspaceFiles(APITest):
 
         # Request files as the owner
         headers = self._get_auth_headers(user)
-        response = self.client.get(f"/v1/workspaces/{workspace_id}/files", headers=headers)
+        response = self.client.get(f"/v1/workspaces/{workspace_id}/files/", headers=headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -92,7 +92,7 @@ class TestListWorkspaceFiles(APITest):
         self._create_file_via_api(workspace_id, "private_data.csv", user)
 
         # Request files without authentication
-        response = self.client.get(f"/v1/workspaces/{workspace_id}/files")
+        response = self.client.get(f"/v1/workspaces/{workspace_id}/files/")
 
         assert response.status_code == 200
         data = response.json()
@@ -112,7 +112,7 @@ class TestListWorkspaceFiles(APITest):
         self._create_file_via_api(workspace_id, "private_data.csv", owner)
 
         # Request files as the other user
-        response = self.client.get(f"/v1/workspaces/{workspace_id}/files")
+        response = self.client.get(f"/v1/workspaces/{workspace_id}/files/")
 
         assert response.status_code == 200
         data = response.json()
@@ -123,7 +123,7 @@ class TestListWorkspaceFiles(APITest):
         """Test listing files for a nonexistent workspace."""
         fake_workspace_id = str(uuid.uuid4())
 
-        response = self.client.get(f"/v1/workspaces/{fake_workspace_id}/files")
+        response = self.client.get(f"/v1/workspaces/{fake_workspace_id}/files/")
 
         assert response.status_code == 404
 
@@ -132,7 +132,7 @@ class TestListWorkspaceFiles(APITest):
         workspace = self._create_workspace_via_api()
         workspace_id = workspace["id"]
 
-        response = self.client.get(f"/v1/workspaces/{workspace_id}/files")
+        response = self.client.get(f"/v1/workspaces/{workspace_id}/files/")
 
         assert response.status_code == 200
         data = response.json()
@@ -146,7 +146,7 @@ class TestListWorkspaceFiles(APITest):
 
         self._create_file_via_api(workspace_id, "test_table.csv")
 
-        response = self.client.get(f"/v1/workspaces/{workspace_id}/files")
+        response = self.client.get(f"/v1/workspaces/{workspace_id}/files/")
 
         assert response.status_code == 200
         data = response.json()
@@ -195,7 +195,7 @@ class TestListWorkspaceFiles(APITest):
         file1_ws3 = self._create_file_via_api(workspace3_id, "data1_ws3.csv")
 
         # Test workspace1 - should return only its 2 files
-        response1 = self.client.get(f"/v1/workspaces/{workspace1_id}/files")
+        response1 = self.client.get(f"/v1/workspaces/{workspace1_id}/files/")
         assert response1.status_code == 200
         data1 = response1.json()
         assert len(data1) == 2
@@ -209,7 +209,7 @@ class TestListWorkspaceFiles(APITest):
         assert file1_ws3["id"] not in file_ids_ws1
 
         # Test workspace2 - should return only its 3 files
-        response2 = self.client.get(f"/v1/workspaces/{workspace2_id}/files")
+        response2 = self.client.get(f"/v1/workspaces/{workspace2_id}/files/")
         assert response2.status_code == 200
         data2 = response2.json()
         assert len(data2) == 3
@@ -224,7 +224,7 @@ class TestListWorkspaceFiles(APITest):
         assert file1_ws3["id"] not in file_ids_ws2
 
         # Test workspace3 - should return only its 1 file
-        response3 = self.client.get(f"/v1/workspaces/{workspace3_id}/files")
+        response3 = self.client.get(f"/v1/workspaces/{workspace3_id}/files/")
         assert response3.status_code == 200
         data3 = response3.json()
         assert len(data3) == 1

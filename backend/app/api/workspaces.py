@@ -83,19 +83,8 @@ async def execute_query(
         # Get all files in the workspace
         files = workspace_service.list_workspace_files(workspace, current_user)
 
-        # Validate the query
-        result = query_service.execute_query(
-            query_request.query,
-            files,
-            page,
-            count=count,
-            size=settings.duckdb_page_size + 1
-        ) # type: ignore
-
-        # Trim results to page size and determine if there are more results
-        result.has_more = len(result.rows) > settings.duckdb_page_size
-        result.rows = result.rows[:settings.duckdb_page_size]
-        return result
+        # Execute the query
+        return query_service.execute_query(query_request.query, files, page, count=count) # type: ignore
     except WorkspaceNotFound:
         # If workspace doesn't exist, return null query
         return QueryResult(columns=[], rows=[], time=0.0)
@@ -251,7 +240,7 @@ async def delete_query(
     return None
 
 
-@router.post("/{workspace_id}/files", status_code=status.HTTP_201_CREATED, include_in_schema=False)
+@router.post("/{workspace_id}/files/", status_code=status.HTTP_201_CREATED, include_in_schema=False)
 async def upload_file(
     workspace_id: uuid.UUID,
     file: UploadFile,
@@ -306,7 +295,7 @@ async def get_workspace(
 
 
 
-@router.get("/{workspace_id}/files", response_model=list[FileSchema])
+@router.get("/{workspace_id}/files/", response_model=list[FileSchema])
 async def list_workspace_files(
     workspace_id: uuid.UUID,
     current_user: User | None = Depends(get_current_user_optional),
@@ -345,7 +334,6 @@ async def update_workspace(
         raise WorkspaceForbidden("Not authorized to update this workspace")
     updated = service.update_workspace(workspace, workspace_data)
     return updated
-
 
 
 @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -48,7 +48,12 @@ from app.models import User, Workspace
 from app.models.file import File
 from app.models.query import Query
 from app.schemas.query import QueryResult, SavedQuery
-from app.services.exceptions import BadQuery, DisallowedQuery, QueryNotFound, WorkspaceForbidden
+from app.services.exceptions import (
+    BadQuery,
+    DisallowedQuery,
+    QueryNotFound,
+    WorkspaceForbidden,
+)
 
 
 class QueryService:
@@ -66,7 +71,7 @@ class QueryService:
 
     def _add_limit(self, expr: Expression, page: int = 1, size: int | None = None) -> Expression:
         """Add a LIMIT 50 to the query if not already present."""
-        return expr.limit(size).offset((page - 1) * size) # type: ignore
+        return expr.limit(size + 1).offset((page - 1) * size) # type: ignore
 
     def _get_all_expression_items(self, expression: Expression) -> list[Expression]:
         # https://github.com/tobymao/sqlglot/blob/main/posts/ast_primer.md#scope
@@ -105,7 +110,6 @@ class QueryService:
                 renamed_table = to_table(self._get_read_csv_calls_for_file(matching_file))
                 renamed_table.set("alias", item.alias) # preserve alias if exists
                 item.replace(renamed_table)
-                # TODO: add alias to the table
         return expression
 
     def _setup_s3(self, con: duckdb.DuckDBPyConnection):
@@ -316,14 +320,15 @@ class QueryService:
         if files is None:
             files = []
         try:
+            if size is None:
+                size = self.settings.duckdb_page_size
             if count:
                 query = f"SELECT COUNT(*) AS count FROM ({query}) arctic_monkeys"
             expression = parse_one(query)
             expression = self._validate_query_and_map_tables(expression, files)
-            if size is None:
-                size = self.settings.duckdb_page_size
-            if page:
-                expression = self._add_limit(expression, page, size)
+            is_limited = not count and page is not None
+            if is_limited:
+                expression = self._add_limit(expression, page, size)  # type: ignore
             sql = expression.sql(dialect="duckdb")
             start_time = time.perf_counter()
             result = self._execute_ducbkdb(sql)
@@ -331,7 +336,8 @@ class QueryService:
             return QueryResult(
                 time=elapsed_time,
                 columns=result['columns'],
-                rows=result['rows']
+                rows=result['rows'] if not is_limited else result['rows'][:size],
+                has_more=len(result['rows']) > size
             )
         except (ParseError, TokenError) as e:
             # TODO: optimize exception handling to avoid showing raw error messages

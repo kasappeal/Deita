@@ -69,12 +69,12 @@ export interface QueryResult {
 // API functions
 export const workspaceApi = {
   getFiles: async (workspaceId: string): Promise<FileData[]> => {
-    const response = await apiClient.get(`/v1/workspaces/${workspaceId}/files`);
+    const response = await apiClient.get(`/v1/workspaces/${workspaceId}/files/`);
     return response.data;
   },
   
   getTables: async (workspaceId: string): Promise<TableData[]> => {
-    const response = await apiClient.get(`/v1/workspaces/${workspaceId}/tables`);
+    const response = await apiClient.get(`/v1/workspaces/${workspaceId}/tables/`);
     return response.data;
   },
   

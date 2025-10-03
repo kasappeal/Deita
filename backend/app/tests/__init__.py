@@ -58,7 +58,7 @@ class APITest:
     def _create_file_via_api(self, workspace_id: str, filename: str, user: User | None = None):
         files = {"file": (filename, b"some,data,to,upload\n1,2,3,4\n5,6,7,8")}
         resp = self.client.post(
-            f"/v1/workspaces/{workspace_id}/files",
+            f"/v1/workspaces/{workspace_id}/files/",
             files=files,
             headers=self._get_auth_headers(user) if user else None
         )
