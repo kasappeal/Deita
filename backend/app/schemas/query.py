@@ -4,7 +4,7 @@ Query schema definitions.
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class QueryRequest(BaseModel):
@@ -35,6 +35,24 @@ class SavedQuery(BaseModel):
     ai_generated: bool
     created_at: datetime
 
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        """Custom validation to map sql_text to query."""
+        if hasattr(obj, 'sql_text'):
+            # Create a dict from the object with sql_text mapped to query
+            data = {
+                'id': obj.id,
+                'workspace_id': obj.workspace_id,
+                'name': obj.name,
+                'query': obj.sql_text,
+                'ai_generated': obj.ai_generated,
+                'created_at': obj.created_at
+            }
+            return super().model_validate(data, **kwargs)
+        return super().model_validate(obj, **kwargs)
+
     class Config:
         from_attributes = True
+
+
 

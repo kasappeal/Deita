@@ -342,12 +342,15 @@ class WorkspaceService:
             raise QueryNotFound(f"Query not found: {query_id}")
 
         # Check permissions based on workspace visibility
+        # Public workspace with no owner: anyone can delete queries
+        # Private workspace: only owner can delete queries
         if workspace.is_public:
-            # For public workspaces without an owner, anyone can delete queries
+            # For public workspaces, check if it has an owner
             if workspace.owner_id is not None:
-                # If workspace has an owner, only the owner can delete
+                # Public workspace with owner - only owner can delete
                 if not user or workspace.owner_id != user.id:
                     raise WorkspaceForbidden("Not authorized to delete queries in this workspace")
+            # else: Public workspace without owner - anyone can delete (no check needed)
         elif workspace.is_private:
             # For private workspaces, only owner can delete queries
             if not user or workspace.owner_id != user.id:
@@ -359,4 +362,3 @@ class WorkspaceService:
         # Delete query record from database
         self.db.delete(query)
         self.db.commit()
-
