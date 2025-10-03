@@ -17,7 +17,8 @@ from app.core.auth import get_current_user, get_current_user_optional
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.models import User
-from app.schemas import QueryRequest, WorkspaceCreate, WorkspaceUpdate
+from app.models.query import Query as QueryModel
+from app.schemas import QueryRequest, SavedQuery, SaveQueryRequest, WorkspaceCreate, WorkspaceUpdate
 from app.schemas import Workspace as WorkspaceSchema
 from app.schemas.file import File as FileSchema
 from app.schemas.query import QueryResult
@@ -160,6 +161,69 @@ async def export_query_csv(
         generate_csv_stream(query_request.query, files),
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.post("/{workspace_id}/queries", response_model=SavedQuery, status_code=status.HTTP_201_CREATED)
+async def save_query(
+    workspace_id: uuid.UUID,
+    query_request: SaveQueryRequest,
+    current_user: User | None = Depends(get_current_user_optional),
+    workspace_service: WorkspaceService = Depends(get_workspace_service),
+    query_service: QueryService = Depends(get_query_service),
+    db: Session = Depends(get_db),
+):
+    """
+    Save a SQL query in a workspace.
+
+    Permission rules:
+    - If workspace is public and has no owner (orphan), any user can save queries
+    - If workspace is private, only the owner can save queries
+    """
+    # Get the workspace and verify it exists
+    workspace = workspace_service.get_workspace_by_id(workspace_id)
+
+    # Check permissions based on workspace visibility and ownership
+    if workspace.is_public and workspace.is_orphaned:
+        # Public orphan workspace: anyone can save queries
+        pass
+    elif workspace.is_private:
+        # Private workspace: only owner can save queries
+        if not current_user or not workspace_service.is_owner(workspace, current_user):
+            from app.services.exceptions import WorkspaceForbidden
+            raise WorkspaceForbidden("Not authorized to save queries in this workspace")
+    else:
+        # Public workspace with owner: only owner can save queries
+        if not current_user or not workspace_service.is_owner(workspace, current_user):
+            from app.services.exceptions import WorkspaceForbidden
+            raise WorkspaceForbidden("Not authorized to save queries in this workspace")
+
+    # Get all files in the workspace for validation
+    files = workspace_service.list_workspace_files(workspace, current_user)
+
+    # Validate the query using QueryService
+    try:
+        query_service.validate_query(query_request.query, files)
+    except BadQuery as e:
+        raise e
+
+    # Create and save the query
+    query = QueryModel(
+        workspace_id=workspace_id,
+        name=query_request.name,
+        sql_text=query_request.query,
+        ai_generated=False,
+    )
+    db.add(query)
+    db.commit()
+    db.refresh(query)
+
+    # Return the saved query with id, name, query (as sql_text), and created_at
+    return SavedQuery(
+        id=query.id,
+        name=query.name,
+        query=query.sql_text,
+        created_at=query.created_at,
     )
 
 

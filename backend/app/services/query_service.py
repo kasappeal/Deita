@@ -131,6 +131,22 @@ class QueryService:
         con.close()
         return res
 
+    def validate_query(self, query: str, files: list[File]) -> None:
+        """
+        Validate SQL query without executing it.
+        
+        Raises:
+            BadQuery: If the query is invalid or references non-existent tables
+            DisallowedQuery: If the query contains disallowed expressions
+        """
+        if files is None:
+            files = []
+        try:
+            expression = parse_one(query)
+            self._validate_query_and_map_tables(expression, files)
+        except (ParseError, TokenError) as e:
+            raise BadQuery(f"Invalid SQL query: {str(e)}") from e
+
     def execute_query(self, query: str, files: list[File], page: int | None = None, size: int | None = None, count: bool = False) -> QueryResult:
         if files is None:
             files = []
