@@ -42,3 +42,6 @@ class BadQuery(BadRequestException):
 
 class DisallowedQuery(BadRequestException):
     pass
+
+class QueryNotFound(NotFoundException):
+    pass

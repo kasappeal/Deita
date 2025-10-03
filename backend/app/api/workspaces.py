@@ -200,6 +200,33 @@ async def save_query(
     )
 
 
+@router.delete("/{workspace_id}/queries/{query_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_query(
+    workspace_id: uuid.UUID,
+    query_id: uuid.UUID,
+    current_user: User | None = Depends(get_current_user_optional),
+    workspace_service: WorkspaceService = Depends(get_workspace_service),
+    query_service: QueryService = Depends(get_query_service),
+):
+    """
+    Delete a SQL query from a workspace.
+
+    Permission rules:
+    - If workspace is public and has no owner (orphan), any user can delete queries
+    - If workspace is private, only the owner can delete queries
+    """
+    # Get the workspace and verify it exists
+    workspace = workspace_service.get_workspace_by_id(workspace_id)
+
+    # Delete the query using the service
+    query_service.delete_query(
+        workspace=workspace,
+        query_id=query_id,
+        current_user=current_user,
+    )
+    return None
+
+
 @router.post("/{workspace_id}/files", status_code=status.HTTP_201_CREATED, include_in_schema=False)
 async def upload_file(
     workspace_id: uuid.UUID,

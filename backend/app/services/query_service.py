@@ -3,6 +3,7 @@ Query service for validating and executing SQL queries.
 """
 
 import time
+import uuid
 
 import duckdb
 from sqlalchemy.orm import Session
@@ -48,7 +49,12 @@ from app.models import User, Workspace
 from app.models.file import File
 from app.models.query import Query
 from app.schemas.query import QueryResult, SavedQuery
-from app.services.exceptions import BadQuery, DisallowedQuery, WorkspaceForbidden
+from app.services.exceptions import (
+    BadQuery,
+    DisallowedQuery,
+    QueryNotFound,
+    WorkspaceForbidden,
+)
 
 
 class QueryService:
@@ -215,6 +221,55 @@ class QueryService:
             query=query.sql_text,
             created_at=query.created_at,
         )
+
+    def delete_query(
+        self,
+        workspace: Workspace,
+        query_id: uuid.UUID,
+        current_user: User | None,
+    ) -> None:
+        """
+        Delete a SQL query from a workspace.
+
+        Permission rules:
+        - If workspace is public and has no owner (orphan), any user can delete queries
+        - If workspace is private, only the owner can delete queries
+        - If workspace is public with owner, only the owner can delete queries
+
+        Args:
+            workspace: The workspace containing the query
+            query_id: ID of the query to delete
+            current_user: Current authenticated user (can be None)
+
+        Raises:
+            QueryNotFound: If the query doesn't exist or doesn't belong to the workspace
+            WorkspaceForbidden: If user is not authorized to delete queries
+        """
+        # Get the query and verify it belongs to the workspace
+        query = self.db.query(Query).filter(
+            Query.id == query_id,
+            Query.workspace_id == workspace.id
+        ).first()
+
+        if not query:
+            raise QueryNotFound("Query not found")
+
+        # Check permissions based on workspace visibility and ownership
+        if workspace.is_public and workspace.is_orphaned:
+            # Public orphan workspace: anyone can delete queries
+            pass
+        elif workspace.is_private:
+            # Private workspace: only owner can delete queries
+            if not current_user or workspace.owner_id != current_user.id:
+                raise WorkspaceForbidden("Not authorized to delete queries in this workspace")
+        else:
+            # Public workspace with owner: only owner can delete queries
+            if not current_user or workspace.owner_id != current_user.id:
+                raise WorkspaceForbidden("Not authorized to delete queries in this workspace")
+
+        # Delete the query
+        self.db.delete(query)
+        self.db.commit()
 
     def execute_query(self, query: str, files: list[File], page: int | None = None, size: int | None = None, count: bool = False) -> QueryResult:
         if files is None:
