@@ -151,6 +151,54 @@ class QueryService:
         except (ParseError, TokenError) as e:
             raise BadQuery(f"Invalid SQL query: {str(e)}") from e
 
+    def list_queries(
+        self,
+        workspace: Workspace,
+        current_user: User | None,
+    ) -> list[SavedQuery]:
+        """
+        List all saved queries in a workspace.
+
+        Permission rules:
+        - If workspace is public and has no owner (orphan), any user can retrieve queries
+        - If workspace is private, only the owner can retrieve queries
+
+        Args:
+            workspace: The workspace to list queries from
+            current_user: Current authenticated user (can be None)
+
+        Returns:
+            list[SavedQuery]: List of saved queries in the workspace
+
+        Raises:
+            WorkspaceForbidden: If user is not authorized to view queries
+        """
+        # Check permissions based on workspace visibility and ownership
+        if workspace.is_public and workspace.is_orphaned:
+            # Public orphan workspace: anyone can retrieve queries
+            pass
+        elif workspace.is_private:
+            # Private workspace: only owner can retrieve queries
+            if not current_user or workspace.owner_id != current_user.id:
+                raise WorkspaceForbidden("Not authorized to view queries in this workspace")
+        else:
+            # Public workspace with owner: anyone can retrieve queries (it's public)
+            pass
+
+        # Get all queries for the workspace
+        queries = self.db.query(Query).filter(Query.workspace_id == workspace.id).all()
+
+        # Convert to SavedQuery schema
+        return [
+            SavedQuery(
+                id=query.id,
+                name=query.name,
+                query=query.sql_text,
+                created_at=query.created_at,
+            )
+            for query in queries
+        ]
+
     def save_query(
         self,
         workspace: Workspace,

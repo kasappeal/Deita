@@ -169,6 +169,30 @@ async def export_query_csv(
     )
 
 
+@router.get("/{workspace_id}/queries", response_model=list[SavedQuery], status_code=status.HTTP_200_OK)
+async def list_queries(
+    workspace_id: uuid.UUID,
+    current_user: User | None = Depends(get_current_user_optional),
+    workspace_service: WorkspaceService = Depends(get_workspace_service),
+    query_service: QueryService = Depends(get_query_service),
+):
+    """
+    List all saved queries in a workspace.
+
+    Permission rules:
+    - If workspace is public and has no owner (orphan), any user can retrieve queries
+    - If workspace is private, only the owner can retrieve queries
+    """
+    # Get the workspace and verify it exists
+    workspace = workspace_service.get_workspace_by_id(workspace_id)
+
+    # List queries using the service
+    return query_service.list_queries(
+        workspace=workspace,
+        current_user=current_user,
+    )
+
+
 @router.post("/{workspace_id}/queries", response_model=SavedQuery, status_code=status.HTTP_201_CREATED)
 async def save_query(
     workspace_id: uuid.UUID,
