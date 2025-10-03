@@ -2,7 +2,7 @@
 Main FastAPI application.
 """
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
@@ -64,6 +64,16 @@ async def forbidden_exception_handler(request: Request, exc: ForbiddenException)
 @app.exception_handler(BadRequestException)
 async def bad_request_exception_handler(request: Request, exc: BadRequestException):
     return JSONResponse(status_code=400, content={"error": str(exc) or "Bad request"})
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Convert HTTPException detail to error for consistency."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.detail},
+        headers=exc.headers
+    )
 
 
 @app.get("/")
