@@ -38,6 +38,42 @@ def verify_token(token: str) -> dict | None:
         return None
 
 
+def create_magic_link_token(email: str) -> str:
+    """
+    Create magic link token for email authentication.
+    
+    Args:
+        email: User email address
+        
+    Returns:
+        JWT token valid for 15 minutes
+    """
+    expires_delta = timedelta(minutes=15)
+    return create_access_token({"sub": email, "type": "magic_link"}, expires_delta=expires_delta)
+
+
+def verify_magic_link_token(token: str) -> str | None:
+    """
+    Verify magic link token and return email.
+    
+    Args:
+        token: JWT token from magic link
+        
+    Returns:
+        Email address if valid, None otherwise
+    """
+    payload = verify_token(token)
+    if not payload:
+        return None
+    
+    # Check token type
+    if payload.get("type") != "magic_link":
+        return None
+    
+    email = payload.get("sub")
+    return email if email else None
+
+
 def get_current_user_optional(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)

@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
+from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.workspaces import router as workspaces_router
 from app.core.config import get_settings
@@ -45,6 +46,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health_router, prefix="/v1", tags=["Health"])
+app.include_router(auth_router, prefix="/v1/auth", tags=["Authentication"])
 app.include_router(workspaces_router, prefix="/v1/workspaces", tags=["Workspaces"])
 
 
