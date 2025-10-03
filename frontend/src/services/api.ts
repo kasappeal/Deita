@@ -65,6 +65,13 @@ export interface QueryResult {
   has_more: boolean;
 }
 
+export interface SavedQuery {
+  id: string;
+  name: string;
+  query: string;
+  created_at: string;
+}
+
 // API functions
 export const workspaceApi = {
   getFiles: async (workspaceId: string): Promise<FileData[]> => {
@@ -95,11 +102,16 @@ export const workspaceApi = {
     return response.data;
   },
 
-  saveQuery: async (workspaceId: string, name: string, query: string): Promise<{id: string, name: string, query: string, created_at: string}> => {
+  saveQuery: async (workspaceId: string, name: string, query: string): Promise<SavedQuery> => {
     const response = await apiClient.post(`/v1/workspaces/${workspaceId}/queries`, {
       name,
       query
     });
+    return response.data;
+  },
+
+  listSavedQueries: async (workspaceId: string): Promise<SavedQuery[]> => {
+    const response = await apiClient.get(`/v1/workspaces/${workspaceId}/queries`);
     return response.data;
   },
 };
