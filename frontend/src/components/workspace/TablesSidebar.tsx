@@ -10,11 +10,12 @@ import {
   Stack,
   Text,
   Tooltip,
-  VStack
+  VStack,
+  useToast
 } from '@chakra-ui/react';
 import React, { useState } from 'react';
-import { FiCode, FiDatabase, FiFile, FiFolder, FiUpload, FiZap } from 'react-icons/fi';
-import { FileData } from '../../services/api';
+import { FiCode, FiDatabase, FiFile, FiFolder, FiTrash2, FiUpload, FiZap } from 'react-icons/fi';
+import { FileData, workspaceApi } from '../../services/api';
 import ChatInterface from './ChatInterface';
 
 interface TableItem {
@@ -33,6 +34,8 @@ interface TablesSidebarProps {
   selectedTableId?: string;
   onTableSelect?: (tableId: string) => void;
   onUploadClick?: () => void;
+  onFileDelete?: (fileId: string) => void;
+  workspaceId?: string;
 }
 
 // Helper function to format file size
@@ -45,16 +48,45 @@ const formatFileSize = (bytes: number): string => {
 
 // Helper function to format table name from filename
 const getTableDisplayName = (filename: string): string => {
-  return filename.replace(/\.[^/.]+$/, "").replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  return filename.replace(/\.[^/.]+$/, "").replace(/_/g, ' ');
 };
 
 const TablesSidebar: React.FC<TablesSidebarProps> = ({ 
   files, 
   selectedTableId, 
   onTableSelect,
-  onUploadClick 
+  onUploadClick,
+  onFileDelete,
+  workspaceId
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('tables');
+  const toast = useToast();
+
+  const handleDeleteFile = async (fileId: string, fileName: string) => {
+    if (window.confirm(`Are you sure you want to delete "${fileName}"? This action cannot be undone.`)) {
+      try {
+        if (workspaceId) {
+          await workspaceApi.deleteFile(workspaceId, fileId);
+        }
+        onFileDelete?.(fileId);
+        toast({
+          title: 'File deleted successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } catch (error) {
+        toast({
+          title: 'Error deleting file',
+          description: 'Please try again later',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        console.error('Error deleting file:', error);
+      }
+    }
+  };
 
   const tables: TableItem[] = files.map(file => ({
     id: file.id,
@@ -97,10 +129,32 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
                 }}
                 size="sm"
               >
-                <CardBody p={3}>
+                <CardBody p={3} position="relative">
+
+                  {/* Delete Button - Bottom Right */}
+                  <Tooltip label="Delete file" placement="top">
+                    <IconButton
+                      aria-label="Delete file"
+                      icon={<Icon as={FiTrash2} />}
+                      size="xs"
+                      variant="ghost"
+                      colorScheme="red"
+                      onClick={() => handleDeleteFile(table.id, table.fileName)}
+                      position="absolute"
+                      bottom={2}
+                      right={2}
+                      zIndex={1}
+                    />
+                  </Tooltip>
+
                   <VStack align="stretch" spacing={2}>
                     {/* Table Name */}
-                    <Text fontWeight="medium" color="gray.800" fontSize="sm">
+                    <Text 
+                      fontWeight="medium" 
+                      color="gray.800" 
+                      fontSize="sm"
+                      pr={8} // Add padding to avoid overlap with delete button
+                    >
                       {table.name}
                     </Text>
                     
@@ -118,7 +172,7 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
                         <Icon as={FiDatabase} boxSize={3} />
                         <Text>{table.rows.toLocaleString()} rows</Text>
                       </Flex>
-                      <Text>{table.fileSize}</Text>
+                      <Text pr={8}>{table.fileSize}</Text>
                     </Flex>
                   </VStack>
                 </CardBody>

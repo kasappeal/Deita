@@ -8,18 +8,18 @@ import TablesSidebar from '@/components/workspace/TablesSidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import apiClient, { FileData, workspaceApi } from '@/services/api';
 import {
-  Box,
-  Flex,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalHeader,
-  ModalOverlay,
-  Spinner,
-  useDisclosure,
-  useToast,
-  VStack
+    Box,
+    Flex,
+    Modal,
+    ModalBody,
+    ModalCloseButton,
+    ModalContent,
+    ModalHeader,
+    ModalOverlay,
+    Spinner,
+    useDisclosure,
+    useToast,
+    VStack
 } from '@chakra-ui/react';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -124,6 +124,19 @@ const WorkspacePage: React.FC = () => {
     onClose();
   };
 
+  const handleFileDelete = (fileId: string) => {
+    // Remove the deleted file from the state and refresh files
+    setFiles(prevFiles => prevFiles.filter(file => file.id !== fileId));
+    
+    // If the deleted file was selected, clear the selection
+    if (selectedTableId === fileId) {
+      setSelectedTableId(undefined);
+      setQuery('');
+      setQueryResult(null);
+      setExecutedQuery('');
+    }
+  };
+
 
 
   const handleQueryResult = (result: QueryResultData | null) => {
@@ -168,6 +181,8 @@ const WorkspacePage: React.FC = () => {
               selectedTableId={selectedTableId}
               onTableSelect={handleTableSelect}
               onUploadClick={onOpen}
+              onFileDelete={handleFileDelete}
+              workspaceId={workspaceId}
             />
           </Box>
         ) : null}

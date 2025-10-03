@@ -102,6 +102,10 @@ export const workspaceApi = {
     });
     return response.data;
   },
+
+  deleteFile: async (workspaceId: string, fileId: string): Promise<void> => {
+    await apiClient.delete(`/v1/workspaces/${workspaceId}/files/${fileId}`);
+  },
 };
 
 export default apiClient
