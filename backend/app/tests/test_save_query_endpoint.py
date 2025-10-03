@@ -64,7 +64,6 @@ class TestSaveQuery(APITest):
         """Test saving a query in a private workspace as non-owner (should fail)."""
         owner = self._create_user("owner@example.com")
         other_user = self._create_user("other@example.com")
-        owner_headers = self._get_auth_headers(owner)
         other_headers = self._get_auth_headers(other_user)
 
         # Create a private workspace as owner
@@ -114,7 +113,6 @@ class TestSaveQuery(APITest):
         """Test saving a query in a public owned workspace as non-owner (should fail)."""
         owner = self._create_user("owner@example.com")
         other_user = self._create_user("other@example.com")
-        owner_headers = self._get_auth_headers(owner)
         other_headers = self._get_auth_headers(other_user)
 
         # Create a public workspace with owner

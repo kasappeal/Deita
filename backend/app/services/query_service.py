@@ -134,7 +134,7 @@ class QueryService:
     def validate_query(self, query: str, files: list[File]) -> None:
         """
         Validate SQL query without executing it.
-        
+
         Raises:
             BadQuery: If the query is invalid or references non-existent tables
             DisallowedQuery: If the query contains disallowed expressions

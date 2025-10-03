@@ -4,7 +4,15 @@ Query database model.
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import UUID, Boolean, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    UUID,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    String,
+    Text,
+)
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base

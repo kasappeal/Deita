@@ -18,7 +18,13 @@ from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.models import User
 from app.models.query import Query as QueryModel
-from app.schemas import QueryRequest, SavedQuery, SaveQueryRequest, WorkspaceCreate, WorkspaceUpdate
+from app.schemas import (
+    QueryRequest,
+    SavedQuery,
+    SaveQueryRequest,
+    WorkspaceCreate,
+    WorkspaceUpdate,
+)
 from app.schemas import Workspace as WorkspaceSchema
 from app.schemas.file import File as FileSchema
 from app.schemas.query import QueryResult
