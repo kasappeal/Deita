@@ -1,6 +1,7 @@
 import apiClient from '@/services/api';
-import { Box, Button, Flex, Textarea, useToast } from '@chakra-ui/react';
+import { Box, Button, Flex, Textarea, Tooltip, useToast } from '@chakra-ui/react';
 import React, { useState } from 'react';
+import { FaPlay } from 'react-icons/fa';
 
 import type { QueryResultData } from './QueryResultTable';
 
@@ -82,14 +83,21 @@ const QueryRunner: React.FC<QueryRunnerProps> = ({ workspaceId, query, setQuery,
               }
             }}
           />
-          <Button
-            type="submit"
-            colorScheme="blue"
-            isLoading={queryLoading}
-            isDisabled={!sqlQuery.trim() || queryLoading}
+          <Tooltip 
+            label={`Run Query (${navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl'}+Enter)`}
+            placement="top"
           >
-            Run
-          </Button>
+            <Button
+              type="submit"
+              colorScheme="blue"
+              isLoading={queryLoading}
+              isDisabled={!sqlQuery.trim() || queryLoading}
+              size="md"
+              px={3}
+            >
+              <FaPlay />
+            </Button>
+          </Tooltip>
         </Flex>
       </form>
     </Box>
