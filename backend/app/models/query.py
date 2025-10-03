@@ -6,7 +6,6 @@ from uuid import uuid4
 
 from sqlalchemy import (
     UUID,
-    Boolean,
     Column,
     DateTime,
     ForeignKey,
@@ -27,7 +26,6 @@ class Query(Base):
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String, nullable=False)
     sql_text = Column(Text, nullable=False)
-    ai_generated = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     # Relationships

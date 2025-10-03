@@ -5,6 +5,7 @@ Query service for validating and executing SQL queries.
 import time
 
 import duckdb
+from sqlalchemy.orm import Session
 from sqlglot import ParseError, TokenError, parse_one, to_table
 from sqlglot.expressions import (
     Alter,
@@ -43,9 +44,11 @@ from sqlglot.expressions import (
 from sqlglot.optimizer.scope import build_scope
 
 from app.core.config import Settings
+from app.models import User, Workspace
 from app.models.file import File
-from app.schemas.query import QueryResult
-from app.services.exceptions import BadQuery, DisallowedQuery
+from app.models.query import Query
+from app.schemas.query import QueryResult, SavedQuery
+from app.services.exceptions import BadQuery, DisallowedQuery, WorkspaceForbidden
 
 
 class QueryService:
@@ -57,8 +60,9 @@ class QueryService:
         Describe, Show, Use, Set, Lock, Comment, Cluster, Detach, Attach, Replace
     }
 
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, db: Session | None = None):
         self.settings = settings
+        self.db = db
 
     def _add_limit(self, expr: Expression, page: int = 1, size: int | None = None) -> Expression:
         """Add a LIMIT 50 to the query if not already present."""
@@ -146,6 +150,71 @@ class QueryService:
             self._validate_query_and_map_tables(expression, files)
         except (ParseError, TokenError) as e:
             raise BadQuery(f"Invalid SQL query: {str(e)}") from e
+
+    def save_query(
+        self,
+        workspace: Workspace,
+        name: str,
+        query_text: str,
+        files: list[File],
+        current_user: User | None,
+    ) -> SavedQuery:
+        """
+        Save a SQL query in a workspace.
+
+        Permission rules:
+        - If workspace is public and has no owner (orphan), any user can save queries
+        - If workspace is private, only the owner can save queries
+        - If workspace is public with owner, only the owner can save queries
+
+        Args:
+            workspace: The workspace to save the query in
+            name: Name of the query
+            query_text: SQL query text
+            files: List of files in the workspace for validation
+            current_user: Current authenticated user (can be None)
+
+        Returns:
+            SavedQuery: The saved query with id, name, query, and created_at
+
+        Raises:
+            WorkspaceForbidden: If user is not authorized to save queries
+            BadQuery: If the query is invalid
+            DisallowedQuery: If the query contains disallowed expressions
+        """
+        # Check permissions based on workspace visibility and ownership
+        if workspace.is_public and workspace.is_orphaned:
+            # Public orphan workspace: anyone can save queries
+            pass
+        elif workspace.is_private:
+            # Private workspace: only owner can save queries
+            if not current_user or workspace.owner_id != current_user.id:
+                raise WorkspaceForbidden("Not authorized to save queries in this workspace")
+        else:
+            # Public workspace with owner: only owner can save queries
+            if not current_user or workspace.owner_id != current_user.id:
+                raise WorkspaceForbidden("Not authorized to save queries in this workspace")
+
+        # Validate the query
+        self.validate_query(query_text, files)
+
+        # Create and save the query
+        query = Query(
+            workspace_id=workspace.id,
+            name=name,
+            sql_text=query_text,
+        )
+        self.db.add(query)
+        self.db.commit()
+        self.db.refresh(query)
+
+        # Return the saved query
+        return SavedQuery(
+            id=query.id,
+            name=query.name,
+            query=query.sql_text,
+            created_at=query.created_at,
+        )
 
     def execute_query(self, query: str, files: list[File], page: int | None = None, size: int | None = None, count: bool = False) -> QueryResult:
         if files is None:
