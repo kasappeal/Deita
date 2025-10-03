@@ -11,63 +11,58 @@ from app.tests import APITest
 class TestMagicLinkRequest(APITest):
     """Tests for POST /v1/auth/magic-link endpoint."""
 
-    @patch("app.api.auth.send_magic_link_email")
-    def test_request_magic_link_new_user(self, mock_send_email):
+    @patch("app.services.auth_service.AuthService.send_magic_link")
+    def test_request_magic_link_new_user(self, mock_send_magic_link):
         """Test requesting magic link for a new user creates the user."""
-        mock_send_email.return_value = None
-        
+        mock_send_magic_link.return_value = None
+
         response = self.client.post(
-            "/v1/auth/magic-link",
-            json={"email": "newuser@example.com"}
+            "/v1/auth/magic-link", json={"email": "newuser@example.com"}
         )
 
         assert response.status_code == 200
         data = response.json()
         assert data["message"] == "Magic link sent to your email."
-        
-        # Verify email was sent
-        mock_send_email.assert_called_once()
-        call_args = mock_send_email.call_args[0]
-        assert call_args[0] == "newuser@example.com"
-        assert "token=" in call_args[1]
 
-    @patch("app.api.auth.send_magic_link_email")
-    def test_request_magic_link_existing_user(self, mock_send_email):
+        # Verify email was sent
+        mock_send_magic_link.assert_called_once()
+        call_args = mock_send_magic_link.call_args[0]
+        assert call_args[0] == "newuser@example.com"
+
+    @patch("app.services.auth_service.AuthService.send_magic_link")
+    def test_request_magic_link_existing_user(self, mock_send_magic_link):
         """Test requesting magic link for existing user."""
-        mock_send_email.return_value = None
-        
+        mock_send_magic_link.return_value = None
+
         # Create user first
         user = self._create_user("existing@example.com")
-        
+
         response = self.client.post(
-            "/v1/auth/magic-link",
-            json={"email": "existing@example.com"}
+            "/v1/auth/magic-link", json={"email": "existing@example.com"}
         )
 
         assert response.status_code == 200
         data = response.json()
         assert data["message"] == "Magic link sent to your email."
-        
+
         # Verify email was sent
-        mock_send_email.assert_called_once()
+        mock_send_magic_link.assert_called_once()
 
     def test_request_magic_link_invalid_email(self):
         """Test requesting magic link with invalid email format."""
         response = self.client.post(
-            "/v1/auth/magic-link",
-            json={"email": "not-an-email"}
+            "/v1/auth/magic-link", json={"email": "not-an-email"}
         )
 
         assert response.status_code == 422  # Validation error
 
-    @patch("app.api.auth.send_magic_link_email")
-    def test_request_magic_link_email_failure(self, mock_send_email):
+    @patch("app.services.auth_service.AuthService.send_magic_link")
+    def test_request_magic_link_email_failure(self, mock_send_magic_link):
         """Test handling email send failure."""
-        mock_send_email.side_effect = Exception("SMTP error")
-        
+        mock_send_magic_link.side_effect = Exception("SMTP error")
+
         response = self.client.post(
-            "/v1/auth/magic-link",
-            json={"email": "test@example.com"}
+            "/v1/auth/magic-link", json={"email": "test@example.com"}
         )
 
         assert response.status_code == 500

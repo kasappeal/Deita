@@ -6,26 +6,49 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from app.core.config import get_settings
 
-settings = get_settings()
+class EmailService:
+    """Service for sending emails via SMTP."""
 
+    def __init__(
+        self,
+        smtp_host: str,
+        smtp_port: int,
+        from_email: str,
+        smtp_user: str | None = None,
+        smtp_password: str | None = None,
+    ):
+        """
+        Initialize EmailService with SMTP settings.
+        
+        Args:
+            smtp_host: SMTP server hostname
+            smtp_port: SMTP server port
+            from_email: Default sender email address
+            smtp_user: SMTP username (optional)
+            smtp_password: SMTP password (optional)
+        """
+        self.smtp_host = smtp_host
+        self.smtp_port = smtp_port
+        self.from_email = from_email
+        self.smtp_user = smtp_user
+        self.smtp_password = smtp_password
 
-def send_magic_link_email(to_email: str, magic_link: str) -> None:
-    """
-    Send magic link email to user.
-    
-    Args:
-        to_email: Recipient email address
-        magic_link: Magic link URL for authentication
-    """
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Your Deita Magic Link"
-    msg["From"] = settings.from_email
-    msg["To"] = to_email
+    def send_magic_link_email(self, to_email: str, magic_link: str) -> None:
+        """
+        Send magic link email to user.
+        
+        Args:
+            to_email: Recipient email address
+            magic_link: Magic link URL for authentication
+        """
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Your Deita Magic Link"
+        msg["From"] = self.from_email
+        msg["To"] = to_email
 
-    # Create plain text version
-    text = f"""
+        # Create plain text version
+        text = f"""
 Hi,
 
 Click the link below to sign in to Deita:
@@ -40,8 +63,8 @@ Best regards,
 The Deita Team
 """
 
-    # Create HTML version
-    html = f"""
+        # Create HTML version
+        html = f"""
 <!DOCTYPE html>
 <html>
 <head>
@@ -63,21 +86,21 @@ The Deita Team
 </html>
 """
 
-    # Attach parts
-    part1 = MIMEText(text, "plain")
-    part2 = MIMEText(html, "html")
-    msg.attach(part1)
-    msg.attach(part2)
+        # Attach parts
+        part1 = MIMEText(text, "plain")
+        part2 = MIMEText(html, "html")
+        msg.attach(part1)
+        msg.attach(part2)
 
-    # Send email
-    try:
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
-            # Only use authentication if credentials are provided
-            if settings.smtp_user and settings.smtp_password:
-                server.starttls()
-                server.login(settings.smtp_user, settings.smtp_password)
-            
-            server.send_message(msg)
-    except Exception as e:
-        # Log the error in production, for now just raise
-        raise Exception(f"Failed to send email: {str(e)}")
+        # Send email
+        try:
+            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                # Only use authentication if credentials are provided
+                if self.smtp_user and self.smtp_password:
+                    server.starttls()
+                    server.login(self.smtp_user, self.smtp_password)
+                
+                server.send_message(msg)
+        except Exception as e:
+            # Log the error in production, for now just raise
+            raise Exception(f"Failed to send email: {str(e)}")
