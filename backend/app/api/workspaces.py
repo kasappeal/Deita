@@ -17,7 +17,13 @@ from app.core.auth import get_current_user, get_current_user_optional
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.models import User
-from app.schemas import QueryRequest, WorkspaceCreate, WorkspaceUpdate
+from app.schemas import (
+    QueryRequest,
+    SavedQuery,
+    SaveQueryRequest,
+    WorkspaceCreate,
+    WorkspaceUpdate,
+)
 from app.schemas import Workspace as WorkspaceSchema
 from app.schemas.file import File as FileSchema
 from app.schemas.query import QueryResult
@@ -41,9 +47,9 @@ def get_workspace_service(db: Session = Depends(get_db)) -> WorkspaceService:
     return WorkspaceService(db, file_storage=file_storage, settings=settings)
 
 
-def get_query_service() -> QueryService:
+def get_query_service(db: Session = Depends(get_db)) -> QueryService:
     settings = get_settings()
-    return QueryService(settings)
+    return QueryService(settings, db)
 
 
 router = APIRouter()
@@ -160,6 +166,37 @@ async def export_query_csv(
         generate_csv_stream(query_request.query, files),
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.post("/{workspace_id}/queries", response_model=SavedQuery, status_code=status.HTTP_201_CREATED)
+async def save_query(
+    workspace_id: uuid.UUID,
+    query_request: SaveQueryRequest,
+    current_user: User | None = Depends(get_current_user_optional),
+    workspace_service: WorkspaceService = Depends(get_workspace_service),
+    query_service: QueryService = Depends(get_query_service),
+):
+    """
+    Save a SQL query in a workspace.
+
+    Permission rules:
+    - If workspace is public and has no owner (orphan), any user can save queries
+    - If workspace is private, only the owner can save queries
+    """
+    # Get the workspace and verify it exists
+    workspace = workspace_service.get_workspace_by_id(workspace_id)
+
+    # Get all files in the workspace for validation
+    files = workspace_service.list_workspace_files(workspace, current_user)
+
+    # Save the query using the service
+    return query_service.save_query(
+        workspace=workspace,
+        name=query_request.name,
+        query_text=query_request.query,
+        files=files,
+        current_user=current_user,
     )
 
 
