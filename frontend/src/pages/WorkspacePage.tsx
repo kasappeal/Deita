@@ -9,7 +9,7 @@ import TableSelectionModal from '@/components/workspace/TableSelectionModal';
 import TablesSidebar from '@/components/workspace/TablesSidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useJoinTables } from '@/hooks/useJoinTables';
-import apiClient, { FileData, workspaceApi } from '@/services/api';
+import apiClient, { FileData, QueryData, workspaceApi } from '@/services/api';
 import {
   Box,
   Flex,
@@ -55,6 +55,7 @@ const WorkspacePage: React.FC = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [autoOpenUpload, setAutoOpenUpload] = useState(false);
   const [pendingNewTableId, setPendingNewTableId] = useState<string | null>(null);
+  const [refreshQueriesSignal, setRefreshQueriesSignal] = useState<number>(0);
   const toast = useToast();
 
   const {
@@ -187,6 +188,11 @@ const WorkspacePage: React.FC = () => {
     setRunQuerySignal(s => s + 1);
   };
 
+  const handleQuerySelect = (selectedQuery: QueryData) => {
+    setQuery(selectedQuery.query);
+    setRunQuerySignal(s => s + 1);
+  };
+
   const handleJoinStart = (leftTableId: string, rightTableId: string) => {
     startJoinWithTwoTables(leftTableId, rightTableId);
   };
@@ -269,6 +275,10 @@ const WorkspacePage: React.FC = () => {
     }
   }, [query]);
 
+  const handleQuerySaved = () => {
+    setRefreshQueriesSignal(prev => prev + 1);
+  };
+
   if (loading) {
     return (
       <Flex flex={1} align="center" justify="center">
@@ -301,6 +311,8 @@ const WorkspacePage: React.FC = () => {
               onJoinAdd={handleJoinAdd}
               joinState={joinState}
               onClearJoins={handleClearJoins}
+              onQuerySelect={handleQuerySelect}
+              refreshQueries={refreshQueriesSignal}
             />
           </Box>
         ) : null}
@@ -330,6 +342,7 @@ const WorkspacePage: React.FC = () => {
                 workspaceId={workspaceId!}
                 query={executedQuery}
                 initialResult={queryResult}
+                onQuerySaved={handleQuerySaved}
               />
             </Box>
           ) : (

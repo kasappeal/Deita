@@ -13,9 +13,9 @@ import {
   VStack,
   useToast
 } from '@chakra-ui/react';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FiCode, FiDatabase, FiFile, FiFolder, FiLink, FiTrash2, FiUpload, FiZap } from 'react-icons/fi';
-import { FileData, workspaceApi } from '../../services/api';
+import { FileData, QueryData, workspaceApi } from '../../services/api';
 import ChatInterface from './ChatInterface';
 
 interface TableItem {
@@ -40,6 +40,8 @@ interface TablesSidebarProps {
   onJoinAdd?: (tableId: string) => void;
   joinState?: { selectedTables: string[]; joinConditions: { leftTable: string; rightTable: string; leftField: string; rightField: string }[] };
   onClearJoins?: () => void;
+  onQuerySelect?: (query: QueryData) => void;
+  refreshQueries?: number; // Signal to refresh saved queries
 }
 
 // Helper function to format file size
@@ -65,10 +67,41 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
   onJoinStart,
   onJoinAdd,
   joinState,
-  onClearJoins
+  onClearJoins,
+  onQuerySelect,
+  refreshQueries
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('tables');
+  const [savedQueries, setSavedQueries] = useState<QueryData[]>([]);
   const toast = useToast();
+
+  const fetchSavedQueries = useCallback(async () => {
+    try {
+      const response = await workspaceApi.getQueries(workspaceId!);
+      setSavedQueries(response);
+    } catch (error) {
+      console.error('Error fetching saved queries:', error);
+      toast({
+        title: 'Error loading saved queries',
+        description: 'Please try again later',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  }, [workspaceId, toast]);
+
+  useEffect(() => {
+    if (workspaceId && activeTab === 'sql') {
+      fetchSavedQueries();
+    }
+  }, [workspaceId, activeTab, fetchSavedQueries]);
+
+  useEffect(() => {
+    if (refreshQueries !== undefined && activeTab === 'sql') {
+      fetchSavedQueries();
+    }
+  }, [refreshQueries, activeTab, fetchSavedQueries]);
 
   const handleDeleteFile = async (fileId: string, fileName: string) => {
     if (window.confirm(`Are you sure you want to delete "${fileName}"? This action cannot be undone.`)) {
@@ -92,6 +125,33 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
           isClosable: true,
         });
         console.error('Error deleting file:', error);
+      }
+    }
+  };
+
+  const handleDeleteQuery = async (queryId: string, queryName: string) => {
+    if (window.confirm(`Are you sure you want to delete the query "${queryName}"? This action cannot be undone.`)) {
+      try {
+        if (workspaceId) {
+          await workspaceApi.deleteQuery(workspaceId, queryId);
+        }
+        // Reload queries after deletion
+        fetchSavedQueries();
+        toast({
+          title: 'Query deleted successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } catch (error) {
+        toast({
+          title: 'Error deleting query',
+          description: 'Please try again later',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        console.error('Error deleting query:', error);
       }
     }
   };
@@ -256,9 +316,61 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
         );
       case 'sql':
         return (
-          <Box flex={1} p={4} textAlign="center">
-            <Text color="gray.500" fontSize="sm">SQL tools coming soon...</Text>
-          </Box>
+          <Stack spacing={2} flex={1}>
+            {!savedQueries || savedQueries.length === 0 ? (
+              <Box p={4} textAlign="center">
+                <Text color="gray.500" fontSize="sm">No saved queries yet</Text>
+              </Box>
+            ) : (
+              savedQueries.map((query) => (
+                <Card
+                  key={query.id}
+                  cursor="pointer"
+                  onClick={() => onQuerySelect?.(query)}
+                  _hover={{ bg: "gray.50" }}
+                  size="sm"
+                >
+                  <CardBody p={3} position="relative">
+
+                    {/* Delete Button - Bottom Right */}
+                    <Tooltip label="Delete query" placement="top">
+                      <IconButton
+                        aria-label="Delete query"
+                        icon={<Icon as={FiTrash2} />}
+                        size="xs"
+                        variant="ghost"
+                        colorScheme="red"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteQuery(query.id, query.name);
+                        }}
+                        position="absolute"
+                        bottom={2}
+                        right={2}
+                        zIndex={1}
+                      />
+                    </Tooltip>
+
+                    <VStack align="stretch" spacing={1}>
+                      {/* Query Name */}
+                      <Text 
+                        fontWeight="medium" 
+                        color="gray.800" 
+                        fontSize="sm"
+                      >
+                        {query.name}
+                      </Text>
+                      
+                      {/* Creation Date */}
+                      <Text fontSize="xs" color="gray.500">
+                        {new Date(query.created_at).toLocaleDateString()}
+                      </Text>
+                    </VStack>
+                  </CardBody>
+                </Card>
+              ))
+            )}
+          </Stack>
         );
       case 'ai':
         return <ChatInterface />;
@@ -298,9 +410,9 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
             />
           </Tooltip>
           
-          <Tooltip label="SQL" placement="bottom">
+          <Tooltip label="Saved queries" placement="bottom">
             <IconButton
-              aria-label="SQL"
+              aria-label="Saved queries"
               icon={<Icon as={FiCode} />}
               size="sm"
               variant={activeTab === 'sql' ? 'solid' : 'ghost'}

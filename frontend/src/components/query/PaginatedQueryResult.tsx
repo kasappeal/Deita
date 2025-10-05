@@ -19,12 +19,14 @@ interface PaginatedQueryResultProps {
   workspaceId: string;
   query: string;
   initialResult: QueryResultData;
+  onQuerySaved?: () => void;
 }
 
 const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
   workspaceId,
   query,
   initialResult,
+  onQuerySaved,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [result, setResult] = useState(initialResult);
@@ -166,6 +168,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
         duration: 3000,
         isClosable: true,
       });
+      onQuerySaved?.();
     } catch (error) {
       console.error('Save Query Error:', error);
       toast({

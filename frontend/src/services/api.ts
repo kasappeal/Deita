@@ -66,6 +66,13 @@ export interface QueryResult {
   has_more: boolean;
 }
 
+export interface QueryData {
+  id: string;
+  name: string;
+  query: string;
+  created_at: string;
+}
+
 // API functions
 export const workspaceApi = {
   getFiles: async (workspaceId: string): Promise<FileData[]> => {
@@ -97,11 +104,20 @@ export const workspaceApi = {
   },
 
   saveQuery: async (workspaceId: string, name: string, query: string): Promise<{id: string, name: string, query: string, created_at: string}> => {
-    const response = await apiClient.post(`/v1/workspaces/${workspaceId}/queries`, {
+    const response = await apiClient.post(`/v1/workspaces/${workspaceId}/queries/`, {
       name,
       query
     });
     return response.data;
+  },
+
+  getQueries: async (workspaceId: string): Promise<QueryData[]> => {
+    const response = await apiClient.get(`/v1/workspaces/${workspaceId}/queries/`);
+    return response.data;
+  },
+
+  deleteQuery: async (workspaceId: string, queryId: string): Promise<void> => {
+    await apiClient.delete(`/v1/workspaces/${workspaceId}/queries/${queryId}`);
   },
 
   deleteFile: async (workspaceId: string, fileId: string): Promise<void> => {
