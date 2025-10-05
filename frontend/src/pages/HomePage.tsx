@@ -11,20 +11,17 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     if (!loading) {
-      // Check for last visited workspace
-      const lastVisitedWorkspaceId = localStorage.getItem('lastVisitedWorkspaceId')
-      if (lastVisitedWorkspaceId) {
-        navigate(`/workspaces/${lastVisitedWorkspaceId}`, { replace: true })
-        return
-      }
-
-      // No last visited workspace
       if (isAuthenticated) {
         // Authenticated user - go to workspaces list
         navigate('/workspaces', { replace: true })
       } else {
-        // Not authenticated - show workspace creation
-        navigate('/create-workspace', { replace: true })
+        // Anonymous user - check for last visited workspace
+        const lastVisitedWorkspaceId = localStorage.getItem('lastVisitedWorkspaceId')
+        if (lastVisitedWorkspaceId) {
+          navigate(`/workspaces/${lastVisitedWorkspaceId}`, { replace: true })
+        } else {
+          navigate('/create-workspace', { replace: true })
+        }
       }
     }
   }, [loading, isAuthenticated, navigate])
