@@ -73,6 +73,14 @@ export interface QueryData {
   created_at: string;
 }
 
+export interface Workspace {
+  id: string;
+  name: string;
+  visibility: 'public' | 'private';
+  owner?: string;
+  created_at: string;
+}
+
 // API functions
 export const workspaceApi = {
   getFiles: async (workspaceId: string): Promise<FileData[]> => {
@@ -122,6 +130,16 @@ export const workspaceApi = {
 
   deleteFile: async (workspaceId: string, fileId: string): Promise<void> => {
     await apiClient.delete(`/v1/workspaces/${workspaceId}/files/${fileId}`);
+  },
+
+  getWorkspaces: async (): Promise<Workspace[]> => {
+    const response = await apiClient.get('/v1/workspaces/');
+    return response.data;
+  },
+
+  createWorkspace: async (name: string, visibility: 'public' | 'private' = 'public'): Promise<Workspace> => {
+    const response = await apiClient.post('/v1/workspaces/', { name, visibility });
+    return response.data;
   },
 };
 

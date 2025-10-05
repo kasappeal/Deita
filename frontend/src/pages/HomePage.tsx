@@ -6,14 +6,28 @@ import { useAuth } from '../contexts/AuthContext'
 
 
 const HomePage: React.FC = () => {
-  const { loading, workspace } = useAuth()
+  const { loading, isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!loading && workspace?.id) {
-      navigate(`/workspaces/${workspace.id}`, { replace: true })
+    if (!loading) {
+      // Check for last visited workspace
+      const lastVisitedWorkspaceId = localStorage.getItem('lastVisitedWorkspaceId')
+      if (lastVisitedWorkspaceId) {
+        navigate(`/workspaces/${lastVisitedWorkspaceId}`, { replace: true })
+        return
+      }
+
+      // No last visited workspace
+      if (isAuthenticated) {
+        // Authenticated user - go to workspaces list
+        navigate('/workspaces', { replace: true })
+      } else {
+        // Not authenticated - show workspace creation
+        navigate('/create-workspace', { replace: true })
+      }
     }
-  }, [loading, workspace, navigate])
+  }, [loading, isAuthenticated, navigate])
 
   // Always show spinner on root
   return (

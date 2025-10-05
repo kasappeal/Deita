@@ -83,6 +83,8 @@ const WorkspacePage: React.FC = () => {
       .then(res => {
         setWorkspaceLocal(res.data);
         setWorkspace(res.data);
+        // Store as last visited workspace
+        localStorage.setItem('lastVisitedWorkspaceId', res.data.id);
       })
       .catch(() => {
         setWorkspaceLocal(null);

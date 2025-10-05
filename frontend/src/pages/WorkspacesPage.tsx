@@ -3,14 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../contexts/AuthContext'
-import { workspaceApi } from '../services/api'
-
-interface Workspace {
-  id: string;
-  name: string;
-  visibility: 'public' | 'private';
-  created_at: string;
-}
+import { Workspace, workspaceApi } from '../services/api'
 
 const WorkspacesPage: React.FC = () => {
   const { isAuthenticated } = useAuth()

@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import apiClient from '../services/api';
 
 export interface User {
@@ -24,6 +24,9 @@ interface AuthContextType {
   loading: boolean;
   setJwt: (token: string | null) => void;
   setWorkspace: (ws: Workspace | null) => void;
+  login: (token: string) => Promise<void>;
+  logout: () => void;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,18 +47,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  // Helper: Generate random workspace name
-  function randomWorkspaceName() {
-    const animals = ['Otter', 'Fox', 'Bear', 'Hawk', 'Wolf', 'Lynx', 'Seal', 'Crane', 'Swan', 'Panda'];
-    const colors = ['Blue', 'Green', 'Red', 'Yellow', 'Purple', 'Orange', 'Silver', 'Gold', 'Indigo', 'Teal'];
-    return `${colors[Math.floor(Math.random()*colors.length)]} ${animals[Math.floor(Math.random()*animals.length)]}`;
-  }
+  // Login with magic link token
+  const login = useCallback(async (token: string) => {
+    const response = await apiClient.post('/v1/auth/verify', { token });
+    const { jwt, user: userData } = response.data;
+    setJwt(jwt);
+    setUser(userData);
+    localStorage.setItem('authToken', jwt);
+    // Clear any anonymous workspace since user is now authenticated
+    localStorage.removeItem('workspaceId');
+    setWorkspace(null);
+    setLoading(false);
+  }, []);
+
+  // Logout
+  const logout = () => {
+    setJwt(null);
+    setUser(null);
+    setWorkspace(null);
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('workspaceId');
+    // Reload page to reset the app state
+    window.location.reload();
+  };
+
+  // Check if user is authenticated
+  const isAuthenticated = !!jwt && !!user;
 
   // On mount: check JWT, workspaceId, and fetch/create as needed
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token && isJwtValid(token)) {
-      setJwt(token);
+    // Check for magic link token in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+
+    if (token) {
+      // Remove token from URL
+      const newUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, newUrl);
+
+      // Verify the token
+      login(token).catch(() => {
+        // Token verification failed, continue with normal flow
+        setLoading(false);
+      });
+      return;
+    }
+
+    const authToken = localStorage.getItem('authToken');
+    if (authToken && isJwtValid(authToken)) {
+      setJwt(authToken);
       apiClient.get('/v1/auth/me').then(res => {
         setUser(res.data);
         setLoading(false);
@@ -80,23 +120,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setLoading(false);
         });
     } else {
-      // Create new workspace
-      const name = randomWorkspaceName();
-      apiClient.post('/v1/workspaces/', { name, visibility: 'public' })
-        .then(res => {
-          setWorkspace(res.data);
-          localStorage.setItem('workspaceId', res.data.id);
-          setLoading(false);
-        })
-        .catch(() => {
-          setWorkspace(null);
-          setLoading(false);
-        });
+      // No workspace in localStorage for anonymous user
+      setWorkspace(null);
+      setLoading(false);
     }
-  }, []);
+  }, [login]);
 
   return (
-    <AuthContext.Provider value={{ jwt, user, workspace, loading, setJwt, setWorkspace }}>
+    <AuthContext.Provider value={{ jwt, user, workspace, loading, setJwt, setWorkspace, login, logout, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );
