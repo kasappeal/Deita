@@ -1,12 +1,12 @@
 import {
-  Box,
-  Button,
-  HStack,
-  Icon,
-  Progress,
-  Text,
-  useToast,
-  VStack
+    Box,
+    Button,
+    HStack,
+    Icon,
+    Progress,
+    Text,
+    useToast,
+    VStack
 } from '@chakra-ui/react';
 import React, { useCallback, useRef, useState } from 'react';
 import { FiAlertTriangle, FiCheckCircle, FiUploadCloud, FiXCircle } from 'react-icons/fi';
@@ -41,7 +41,7 @@ interface FileUploaderProps {
 interface UploadingFile {
   file: File;
   progress: number;
-  status: 'uploading' | 'completed' | 'error';
+  status: 'uploading' | 'processing' | 'completed' | 'error';
   error?: string;
 }
 
@@ -91,7 +91,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, existingFiles 
           setUploadingFiles(prev =>
             prev.map(f => 
               f.file === file 
-                ? { ...f, progress: percentCompleted } 
+                ? { ...f, progress: percentCompleted, status: percentCompleted === 100 ? 'processing' : 'uploading' } 
                 : f
             )
           );
@@ -349,7 +349,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, existingFiles 
                     <HStack>
                     <Text fontSize="sm">
                         {isWaitingForConfirmation ? 'Waiting for confirmation' :
-                         file.status === 'completed' ? '100%' : `${file.progress}%`}
+                         file.status === 'completed' ? '100%' : 
+                         file.status === 'processing' ? 'Processing...' :
+                         `${file.progress}%`}
                     </Text>
                     {file.status === 'completed' && (
                         <Icon as={FiCheckCircle} color="green.500" />
@@ -363,9 +365,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, existingFiles 
                     </HStack>
                 </HStack>
                 <Progress 
-                    value={isWaitingForConfirmation ? 0 : file.status === 'completed' ? 100 : file.progress} 
+                    value={isWaitingForConfirmation ? 0 : file.status === 'completed' ? 100 : file.status === 'processing' ? 100 : file.progress} 
                     size="sm" 
-                    colorScheme={file.status === 'error' ? 'red' : isWaitingForConfirmation ? 'orange' : 'green'} 
+                    colorScheme={file.status === 'error' ? 'red' : isWaitingForConfirmation ? 'orange' : file.status === 'processing' ? 'yellow' : 'green'} 
                     borderRadius="full"
                 />
                 {file.error && (
