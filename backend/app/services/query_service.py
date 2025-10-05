@@ -108,7 +108,7 @@ class QueryService:
                     raise BadQuery(f"Table '{table_name}' does not exist in the workspace.")
                 matching_file = tables_map[table_name] # type: ignore
                 renamed_table = to_table(self._get_read_csv_calls_for_file(matching_file))
-                renamed_table.set("alias", item.alias) # preserve alias if exists
+                renamed_table.set("alias", item.alias or table_name) # preserve alias if exists
                 item.replace(renamed_table)
         return expression
 
@@ -331,6 +331,7 @@ class QueryService:
                 expression = self._add_limit(expression, page, size)  # type: ignore
             sql = expression.sql(dialect="duckdb")
             start_time = time.perf_counter()
+            print(sql)
             result = self._execute_ducbkdb(sql)
             elapsed_time = time.perf_counter() - start_time
             return QueryResult(
@@ -339,6 +340,6 @@ class QueryService:
                 rows=result['rows'] if not is_limited else result['rows'][:size],
                 has_more=len(result['rows']) > size
             )
-        except (ParseError, TokenError) as e:
+        except (ParseError, TokenError, duckdb.Error) as e:
             # TODO: optimize exception handling to avoid showing raw error messages
-            raise BadQuery("Invalid SQL query: {str(e)}") from e
+            raise BadQuery(str(e)) from e
