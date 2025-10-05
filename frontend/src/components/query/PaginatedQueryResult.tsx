@@ -87,9 +87,9 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
       console.error('Query Error:', error);
       toast({
         title: 'Query Error',
-        description: 'Failed to execute query.',
+        description: error.response?.data?.error || 'Failed to execute query.',
         status: 'error',
-        duration: 4000,
+        duration: 10000,
         isClosable: true,
       });
     } finally {
@@ -136,7 +136,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
         console.error('Count Query Error:', error);
         toast({
           title: 'Count Query Error',
-          description: 'Failed to fetch total count.',
+          description: error.response?.data?.error || 'Failed to fetch total count.',
           status: 'error',
           duration: 4000,
           isClosable: true,

@@ -3,6 +3,7 @@ import { Box, Button, Flex, Textarea, Tooltip, useToast } from '@chakra-ui/react
 import React, { useState } from 'react';
 import { FaPlay } from 'react-icons/fa';
 
+import { validateSqlSyntax } from '@/utils/sqlValidation';
 import type { QueryResultData } from './QueryResultTable';
 
 interface QueryRunnerProps {
@@ -20,8 +21,12 @@ const QueryRunner: React.FC<QueryRunnerProps> = ({ workspaceId, query, setQuery,
   const [queryLoading, setQueryLoading] = useState(false);
   const toast = useToast();
 
+  // SQL validation
+  const sqlValidation = validateSqlSyntax(sqlQuery);
+  const isSqlValid = sqlValidation.isValid;
+
   const runQuery = async () => {
-    if (!sqlQuery.trim() || !workspaceId) return;
+    if (!sqlQuery.trim() || !workspaceId || !isSqlValid) return;
     setQueryLoading(true);
     try {
       const res = await apiClient.post(`/v1/workspaces/${workspaceId}/query`, { query: sqlQuery });
@@ -32,9 +37,9 @@ const QueryRunner: React.FC<QueryRunnerProps> = ({ workspaceId, query, setQuery,
       console.error('Query Error:', err);
       toast({
         title: 'Query Error',
-        description: 'Failed to execute query.',
+        description:  err.response?.data?.error.replace(/\u001b\[[0-9;]*m/g, '💥') || 'Failed to run query.',
         status: 'error',
-        duration: 4000,
+        duration: 10000,
         isClosable: true,
       });
     } finally {
@@ -72,26 +77,34 @@ const QueryRunner: React.FC<QueryRunnerProps> = ({ workspaceId, query, setQuery,
             maxH="200px"
             resize="none"
             rows={sqlQuery.split('\n').length}
+            borderColor={!isSqlValid && sqlQuery.trim() ? "red.300" : undefined}
+            _hover={!isSqlValid && sqlQuery.trim() ? { borderColor: "red.400" } : undefined}
             onKeyDown={e => {
               if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
-                // Run the query
-                const form = e.currentTarget.form;
-                if (form) {
-                  form.requestSubmit();
+                if (isSqlValid && sqlQuery.trim()) {
+                  // Run the query
+                  const form = e.currentTarget.form;
+                  if (form) {
+                    form.requestSubmit();
+                  }
                 }
               }
             }}
           />
           <Tooltip 
-            label={`Run Query (${navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl'}+Enter)`}
+            label={
+              !isSqlValid 
+                ? sqlValidation.error || 'Invalid SQL syntax'
+                : `Run Query (${navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl'}+Enter)`
+            }
             placement="top"
           >
             <Button
               type="submit"
               colorScheme="blue"
               isLoading={queryLoading}
-              isDisabled={!sqlQuery.trim() || queryLoading}
+              isDisabled={!sqlQuery.trim() || queryLoading || !isSqlValid}
               size="md"
               px={3}
             >
