@@ -14,6 +14,7 @@ from app.core.database import get_db
 from app.models import User
 from app.services.auth_service import AuthService
 from app.services.email_service import EmailService
+from app.services.user_service import UserService
 
 settings = get_settings()
 security = HTTPBearer(auto_error=False)
@@ -35,6 +36,11 @@ def get_auth_service(
 ) -> AuthService:
     """Get AuthService instance."""
     return AuthService(email_service=email_service, settings=settings)
+
+
+def get_user_service(db: Session = Depends(get_db)) -> UserService:
+    """Get UserService instance."""
+    return UserService(db=db)
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
@@ -102,7 +108,7 @@ def verify_magic_link_token(token: str) -> str | None:
 
 def get_current_user_optional(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
+    user_service: UserService = Depends(get_user_service),
 ) -> User | None:
     """
     Get current user from JWT token. Returns None if not authenticated.
@@ -126,13 +132,13 @@ def get_current_user_optional(
     except (ValueError, TypeError):
         return None
 
-    user = db.query(User).filter(User.id == user_id).first()
+    user = user_service.get_user_by_id(user_id)
     return user
 
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
+    user_service: UserService = Depends(get_user_service),
 ) -> User:
     """
     Get current user from JWT token. Raises exception if not authenticated.
@@ -171,7 +177,7 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = db.query(User).filter(User.id == user_id).first()
+    user = user_service.get_user_by_id(user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

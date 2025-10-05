@@ -38,15 +38,9 @@ async def request_magic_link(
     # Check if user exists, create if not
     user = user_service.get_or_create_user(email)
 
-    # In production, this would be the frontend URL
-    # For now, we'll use a placeholder that can be configured
-    frontend_url = (
-        settings.allowed_origins[0] if settings.allowed_origins else "http://localhost:3000"
-    )
-
     # Send email with magic link
     try:
-        auth_service.send_magic_link(email, frontend_url)
+        auth_service.send_magic_link(email, settings.frontend_url)
     except Exception as e:
         # Log error but don't expose details to client
         raise HTTPException(
