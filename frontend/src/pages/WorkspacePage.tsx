@@ -1,27 +1,30 @@
-
 import FileUploader from '@/components/files/FileUploader';
 import PaginatedQueryResult from '@/components/query/PaginatedQueryResult';
 import { QueryResultData } from '@/components/query/QueryResultTable';
 import QueryRunner from '@/components/query/QueryRunner';
 import EmptyTableState, { NoFilesState } from '@/components/workspace/EmptyTableState';
+import JoinModal from '@/components/workspace/JoinModal';
+import JoinedTableSelectionModal from '@/components/workspace/JoinedTableSelectionModal';
+import TableSelectionModal from '@/components/workspace/TableSelectionModal';
 import TablesSidebar from '@/components/workspace/TablesSidebar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useJoinTables } from '@/hooks/useJoinTables';
 import apiClient, { FileData, workspaceApi } from '@/services/api';
 import {
-    Box,
-    Flex,
-    Modal,
-    ModalBody,
-    ModalCloseButton,
-    ModalContent,
-    ModalHeader,
-    ModalOverlay,
-    Spinner,
-    useDisclosure,
-    useToast,
-    VStack
+  Box,
+  Flex,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay,
+  Spinner,
+  useDisclosure,
+  useToast,
+  VStack
 } from '@chakra-ui/react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 interface Workspace {
@@ -45,11 +48,29 @@ const WorkspacePage: React.FC = () => {
   const [query, setQuery] = useState<string>('');
   const [executedQuery, setExecutedQuery] = useState<string>('');
   const [runQuerySignal, setRunQuerySignal] = useState<number>(0);
+  const [isJoinGeneratedQuery, setIsJoinGeneratedQuery] = useState<boolean>(false);
+  const lastProgrammaticQueryRef = useRef<string>('');
   const [queryResult, setQueryResult] = useState<QueryResultData | null>(null);
   const { setWorkspace } = useAuth();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [autoOpenUpload, setAutoOpenUpload] = useState(false);
+  const [pendingNewTableId, setPendingNewTableId] = useState<string | null>(null);
   const toast = useToast();
+
+  const {
+    joinState,
+    isJoinModalOpen,
+    isTableSelectionModalOpen,
+    isJoinedTableSelectionModalOpen,
+    startJoinWithTwoTables,
+    addTableToJoin,
+    addJoinCondition,
+    startJoinWithJoinedTable,
+    resetJoin,
+    setIsJoinModalOpen,
+    setIsTableSelectionModalOpen,
+    setIsJoinedTableSelectionModalOpen,
+  } = useJoinTables();
 
 
   // Fetch workspace data
@@ -143,17 +164,110 @@ const WorkspacePage: React.FC = () => {
     setQueryResult(result);
     if (result !== null) {
       setExecutedQuery(query);
+      
+      // If a non-join-generated query was executed successfully, clear joins
+      if (!isJoinGeneratedQuery) {
+        resetJoin();
+      }
     }
   };
 
   // When a table is selected, write SELECT query and run it
   const handleTableSelect = (tableId: string) => {
+    // Clear any existing joins when selecting a table
+    resetJoin();
+    
     setSelectedTableId(tableId);
     const selectedFile = files.find(file => file.id === tableId);
     const tableName = selectedFile?.table_name || selectedFile?.filename?.replace(/\.[^/.]+$/, '') || 'unknown_table';
-    setQuery(`SELECT * FROM "${tableName}"`);
+    const newQuery = `SELECT * FROM "${tableName}"`;
+    setQuery(newQuery);
+    lastProgrammaticQueryRef.current = newQuery;
+    setIsJoinGeneratedQuery(false); // This is a simple table selection query, not join-generated
     setRunQuerySignal(s => s + 1);
   };
+
+  const handleJoinStart = (leftTableId: string, rightTableId: string) => {
+    startJoinWithTwoTables(leftTableId, rightTableId);
+  };
+
+  const handleClearJoins = () => {
+    resetJoin();
+    setSelectedTableId(undefined);
+    setQuery('');
+    setQueryResult(null);
+    setExecutedQuery('');
+    setIsJoinGeneratedQuery(false);
+    lastProgrammaticQueryRef.current = '';
+  };
+
+  const handleJoinAdd = (tableId: string) => {
+    // If there are already joined tables, ask which one to connect to
+    if (joinState.selectedTables.length > 1) {
+      setPendingNewTableId(tableId);
+      setIsJoinedTableSelectionModalOpen(true);
+    } else {
+      // Normal flow for first join
+      addTableToJoin(tableId, files);
+    }
+  };
+
+  const handleSelectJoinedTable = (joinedTableId: string) => {
+    if (pendingNewTableId) {
+      startJoinWithJoinedTable(joinedTableId, pendingNewTableId, files);
+      setPendingNewTableId(null);
+    }
+  };
+
+  const handleJoinCondition = (leftTable: string, rightTable: string, leftField: string, rightField: string, joinType: 'INNER' | 'LEFT' | 'RIGHT' | 'FULL') => {
+    // First add the join condition
+    addJoinCondition(leftTable, rightTable, leftField, rightField, joinType);
+    
+    // Calculate what the new join state will be after adding the condition
+    const newJoinConditions = [...joinState.joinConditions, { leftTable, rightTable, leftField, rightField, joinType }];
+    const newSelectedTables = [...joinState.selectedTables];
+    
+    // If the right table is not already in selected tables, add it
+    if (!newSelectedTables.includes(rightTable)) {
+      newSelectedTables.push(rightTable);
+    }
+    
+    // Generate the query based on the new state
+    const tableNames = newSelectedTables.map(tableId => {
+      const file = files.find(f => f.id === tableId);
+      return file?.table_name || file?.filename?.replace(/\.[^/.]+$/, '') || 'unknown_table';
+    });
+
+    // Create a mapping from table ID to table name for easier lookup
+    const tableIdToName: Record<string, string> = {};
+    newSelectedTables.forEach((tableId, index) => {
+      tableIdToName[tableId] = tableNames[index];
+    });
+
+    let joinQuery = `SELECT *\nFROM "${tableNames[0]}"`;
+    for (let i = 1; i < tableNames.length; i++) {
+      const condition = newJoinConditions[i - 1];
+      if (condition) {
+        const leftTableName = tableIdToName[condition.leftTable];
+        const rightTableName = tableIdToName[condition.rightTable];
+        joinQuery += `\n${condition.joinType} JOIN "${rightTableName}" ON "${leftTableName}"."${condition.leftField}" = "${rightTableName}"."${condition.rightField}"`;
+      }
+    }
+    
+    // Set the query and execute it
+    setQuery(joinQuery);
+    lastProgrammaticQueryRef.current = joinQuery;
+    setIsJoinGeneratedQuery(true); // This query was generated by the join mechanism
+    setRunQuerySignal(s => s + 1);
+  };
+
+  // Watch for query changes to detect manual edits
+  useEffect(() => {
+    if (query !== lastProgrammaticQueryRef.current && lastProgrammaticQueryRef.current !== '') {
+      // User has modified the query manually
+      setIsJoinGeneratedQuery(false);
+    }
+  }, [query]);
 
   if (loading) {
     return (
@@ -183,6 +297,10 @@ const WorkspacePage: React.FC = () => {
               onUploadClick={onOpen}
               onFileDelete={handleFileDelete}
               workspaceId={workspaceId}
+              onJoinStart={handleJoinStart}
+              onJoinAdd={handleJoinAdd}
+              joinState={joinState}
+              onClearJoins={handleClearJoins}
             />
           </Box>
         ) : null}
@@ -235,6 +353,37 @@ const WorkspacePage: React.FC = () => {
           </ModalBody>
         </ModalContent>
       </Modal>
+
+      {/* Join Modal */}
+      <JoinModal
+        isOpen={isJoinModalOpen}
+        onClose={() => {
+          setIsJoinModalOpen(false);
+          resetJoin(); // Reset join state when modal is closed
+        }}
+        leftTableId={joinState.currentJoinTable || ''}
+        rightTableId={joinState.selectedTables[joinState.selectedTables.length - 1] || ''}
+        files={files}
+        onJoin={handleJoinCondition}
+      />
+
+      {/* Table Selection Modal */}
+      <TableSelectionModal
+        isOpen={isTableSelectionModalOpen}
+        onClose={() => setIsTableSelectionModalOpen(false)}
+        availableTables={files.filter(f => !joinState.selectedTables.includes(f.id))}
+        onTableSelect={handleJoinAdd}
+      />
+
+      {/* Joined Table Selection Modal - New */}
+      <JoinedTableSelectionModal
+        isOpen={isJoinedTableSelectionModalOpen}
+        onClose={() => setIsJoinedTableSelectionModalOpen(false)}
+        joinedTableIds={joinState.selectedTables}
+        newTableId={pendingNewTableId || ''}
+        files={files}
+        onSelectJoinedTable={handleSelectJoinedTable}
+      />
     </VStack>
   );
 };

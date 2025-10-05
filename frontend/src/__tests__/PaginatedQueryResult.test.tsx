@@ -154,13 +154,13 @@ describe('PaginatedQueryResult', () => {
 
     // Check that navigation buttons are rendered
     expect(screen.getByText('Previous')).toBeInTheDocument();
-    expect(screen.getByText('Next')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /next results/i })).toBeInTheDocument();
 
     // Check that Previous button is disabled (page 1)
     expect(screen.getByText('Previous')).toBeDisabled();
 
     // Check that Next button is enabled (has_more = true)
-    expect(screen.getByText('Next')).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /next results/i })).not.toBeDisabled();
   });
 
   it('handles next page navigation', async () => {
@@ -187,7 +187,7 @@ describe('PaginatedQueryResult', () => {
     );
 
     // Click Next button
-    fireEvent.click(screen.getByText('Next'));
+    fireEvent.click(screen.getByRole('button', { name: /next results/i }));
 
     // Wait for API call and state update
     await waitFor(() => {
@@ -225,7 +225,7 @@ describe('PaginatedQueryResult', () => {
     );
 
     // Click Next button to go to page 2
-    fireEvent.click(screen.getByText('Next'));
+    fireEvent.click(screen.getByRole('button', { name: /next results/i }));
 
     await waitFor(() => {
       expect(screen.getByText('Showing rows 4 to 6')).toBeInTheDocument();
@@ -233,7 +233,7 @@ describe('PaginatedQueryResult', () => {
 
     // Both buttons should be enabled on middle page
     expect(screen.getByText('Previous')).not.toBeDisabled();
-    expect(screen.getByText('Next')).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /next results/i })).not.toBeDisabled();
   });
 
   it('handles API errors gracefully', async () => {

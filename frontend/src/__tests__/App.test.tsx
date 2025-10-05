@@ -74,7 +74,7 @@ describe('App', () => {
       </TestWrapper>
     );
     // Wait for the workspace header to appear after loading
-    expect(await screen.findByText('Workspace: Test Workspace')).toBeInTheDocument();
+    expect(await screen.findByText('Test Workspace')).toBeInTheDocument();
   });
 
   beforeEach(() => {
@@ -86,6 +86,9 @@ describe('App', () => {
       }
       if (url === '/v1/health') {
         return Promise.resolve({ data: { status: 'healthy', message: 'All systems go!', version: '1.0.0', timestamp: new Date().toISOString() } });
+      }
+      if (url.startsWith('/v1/workspaces/') && url.endsWith('/files/')) {
+        return Promise.resolve({ data: [] }); // Return empty array for files
       }
       if (url.startsWith('/v1/workspaces/')) {
         return Promise.resolve({ data: { id: 'ws_test', name: 'Test Workspace', visibility: 'public', owner: null, created_at: new Date().toISOString() } });

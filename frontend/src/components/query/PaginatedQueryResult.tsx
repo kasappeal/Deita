@@ -145,7 +145,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
     } else {
       // We have the count, calculate and go to last page
       const pageSize = resultsPerPage || result.rows.length;
-      const lastPage = Math.ceil(totalCount / pageSize) - 1;
+      const lastPage = Math.ceil(totalCount / pageSize);
       executeQuery(lastPage);
     }
   };

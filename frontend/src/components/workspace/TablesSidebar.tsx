@@ -14,7 +14,7 @@ import {
   useToast
 } from '@chakra-ui/react';
 import React, { useState } from 'react';
-import { FiCode, FiDatabase, FiFile, FiFolder, FiTrash2, FiUpload, FiZap } from 'react-icons/fi';
+import { FiCode, FiDatabase, FiFile, FiFolder, FiLink, FiTrash2, FiUpload, FiZap } from 'react-icons/fi';
 import { FileData, workspaceApi } from '../../services/api';
 import ChatInterface from './ChatInterface';
 
@@ -36,6 +36,10 @@ interface TablesSidebarProps {
   onUploadClick?: () => void;
   onFileDelete?: (fileId: string) => void;
   workspaceId?: string;
+  onJoinStart?: (leftTableId: string, rightTableId: string) => void;
+  onJoinAdd?: (tableId: string) => void;
+  joinState?: { selectedTables: string[]; joinConditions: { leftTable: string; rightTable: string; leftField: string; rightField: string }[] };
+  onClearJoins?: () => void;
 }
 
 // Helper function to format file size
@@ -57,7 +61,11 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
   onTableSelect,
   onUploadClick,
   onFileDelete,
-  workspaceId
+  workspaceId,
+  onJoinStart,
+  onJoinAdd,
+  joinState,
+  onClearJoins
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('tables');
   const toast = useToast();
@@ -113,21 +121,79 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
               Upload Files
             </Button>
 
-            {tables.map((table) => (
+            {joinState && joinState.selectedTables.length > 0 && (
+              <Button
+                colorScheme="red"
+                variant="outline"
+                leftIcon={<Icon as={FiTrash2} />}
+                onClick={onClearJoins}
+                size="sm"
+                width="full"
+              >
+                Clear Joins
+              </Button>
+            )}
+
+            {tables.map((table) => {
+              const isSelected = selectedTableId === table.id;
+              const isInJoin = joinState?.selectedTables.includes(table.id);
+              const showAddToJoinButton = joinState && joinState.selectedTables.length > 0 && !isInJoin;
+
+              return (
               <Card
                 key={table.id}
                 cursor="pointer"
                 onClick={() => onTableSelect?.(table.id)}
-                bg={selectedTableId === table.id ? "blue.50" : "white"}
-                borderColor={selectedTableId === table.id ? "blue.200" : "gray.200"}
+                bg={isSelected ? "blue.50" : isInJoin ? "blue.50" : "white"}
+                borderColor={isSelected ? "blue.200" : isInJoin ? "blue.200" : "gray.200"}
                 borderWidth="1px"
                 _hover={{
-                  bg: selectedTableId === table.id ? "blue.50" : "gray.50",
+                  bg: isSelected ? "blue.50" : isInJoin ? "blue.50" : "gray.50",
                   borderColor: "blue.300"
                 }}
                 size="sm"
               >
                 <CardBody p={3} position="relative">
+
+                  {/* Link Button - Top Right */}
+                  {selectedTableId && !isSelected && !isInJoin && (
+                    <Tooltip label="Join with selected file" placement="top">
+                      <IconButton
+                        aria-label="Join files"
+                        icon={<Icon as={FiLink} />}
+                        size="xs"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onJoinStart?.(selectedTableId!, table.id);
+                        }}
+                        position="absolute"
+                        top={2}
+                        right={2}
+                        zIndex={2}
+                      />
+                    </Tooltip>
+                  )}
+
+                  {/* Add to Join Button - Top Right (when joining multiple tables) */}
+                  {showAddToJoinButton && (
+                    <Tooltip label="Add to join" placement="top">
+                      <IconButton
+                        aria-label="Add to join"
+                        icon={<Icon as={FiLink} />}
+                        size="xs"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onJoinAdd?.(table.id);
+                        }}
+                        position="absolute"
+                        top={2}
+                        right={2}
+                        zIndex={2}
+                      />
+                    </Tooltip>
+                  )}
 
                   {/* Delete Button - Bottom Right */}
                   <Tooltip label="Delete file" placement="top">
@@ -147,14 +213,23 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
 
                   <VStack align="stretch" spacing={2}>
                     {/* Table Name */}
-                    <Text 
-                      fontWeight="medium" 
-                      color="gray.800" 
-                      fontSize="sm"
-                      pr={8} // Add padding to avoid overlap with delete button
-                    >
-                      {table.name}
-                    </Text>
+                    <Flex align="center" gap={2}>
+                      <Text 
+                        fontWeight="medium" 
+                        color="gray.800" 
+                        fontSize="sm"
+                      >
+                        {table.name}
+                      </Text>
+                      {isInJoin && (
+                        <Icon 
+                          as={FiLink} 
+                          color="blue.500" 
+                          boxSize={4}
+                          opacity={0.7}
+                        />
+                      )}
+                    </Flex>
                     
                     {/* File Source */}
                     <Flex align="center" gap={1}>
@@ -175,7 +250,8 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
                   </VStack>
                 </CardBody>
               </Card>
-            ))}
+              );
+            })}
           </Stack>
         );
       case 'sql':
