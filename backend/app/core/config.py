@@ -71,6 +71,11 @@ class Settings(BaseSettings):
         alias="ALLOWED_ORIGINS",
     )
 
+    # === Frontend Configuration ===
+    frontend_url: str = Field(
+        default="http://localhost:3000", alias="FRONTEND_URL"
+    )
+
     @validator("allowed_origins", pre=True)
     def parse_cors_origins(cls, v):
         """Parse CORS origins from string or list."""
