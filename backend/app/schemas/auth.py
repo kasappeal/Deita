@@ -23,3 +23,10 @@ class AuthResponse(BaseModel):
     """Schema for authentication response with JWT."""
     jwt: str
     user: dict
+
+
+class UserInfo(BaseModel):
+    """Schema for user info response."""
+    id: str
+    email: EmailStr
+    name: str

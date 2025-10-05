@@ -5,10 +5,16 @@ Authentication API routes for magic link authentication.
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_auth_service
+from app.core.auth import get_auth_service, get_current_user
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.schemas import AuthResponse, MagicLinkRequest, MagicLinkResponse, VerifyTokenRequest
+from app.schemas.auth import (
+    AuthResponse,
+    MagicLinkRequest,
+    MagicLinkResponse,
+    UserInfo,
+    VerifyTokenRequest,
+)
 from app.services.auth_service import AuthService
 from app.services.user_service import UserService
 
@@ -36,17 +42,17 @@ async def request_magic_link(
     email = request.email.lower()
 
     # Check if user exists, create if not
-    user = user_service.get_or_create_user(email)
+    _ = user_service.get_or_create_user(email)
 
     # Send email with magic link
     try:
         auth_service.send_magic_link(email, settings.frontend_url)
-    except Exception as e:
+    except Exception:
         # Log error but don't expose details to client
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to send magic link email. Please try again later.",
-        )
+        ) from None
 
     return MagicLinkResponse(message="Magic link sent to your email.")
 
@@ -91,4 +97,20 @@ async def verify_magic_link(
             "email": user.email,
             "name": user.full_name or user.email.split("@")[0],
         },
+    )
+
+
+@router.get("/me", response_model=UserInfo)
+async def get_current_user_info(
+    current_user=Depends(get_current_user),
+):
+    """
+    Get current authenticated user info.
+
+    Returns the current user's basic information.
+    """
+    return UserInfo(
+        id=f"user_{current_user.id}",
+        email=current_user.email,
+        name=current_user.full_name or current_user.email.split("@")[0],
     )
