@@ -26,6 +26,7 @@
         "dbaeumer.vscode-eslint",
         "formulahendry.auto-rename-tag",
         "ms-vscode.vscode-json",
+        "Orta.vscode-jest",
         
         // General extensions
         "redhat.vscode-yaml",
