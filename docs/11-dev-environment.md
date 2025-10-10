@@ -207,42 +207,40 @@ The dev container comes with debugging pre-configured:
 
 ### Backend (`backend/.env`)
 
-| Variable                    | Description                   | Example Value                                |
-| --------------------------- | ----------------------------- | -------------------------------------------- |
-| DATABASE_URL                | PostgreSQL connection string  | postgresql://deita:deita@postgres:5432/deita |
-| S3_ENDPOINT                 | MinIO/S3 endpoint             | http://minio:9000                            |
-| S3_ACCESS_KEY               | MinIO/S3 access key           | deita                                        |
-| S3_SECRET_KEY               | MinIO/S3 secret key           | deita123                                     |
-| S3_BUCKET_NAME              | MinIO/S3 bucket name          | deita-files                                  |
-| SMTP_HOST                   | Email server host             | mailhog                                      |
-| SMTP_PORT                   | Email server port             | 1025                                         |
-| SMTP_USER                   | Email server username         | (blank for dev)                              |
-| SMTP_PASSWORD               | Email server password         | (blank for dev)                              |
-| FROM_EMAIL                  | Default sender email          | noreply@deita.app                            |
-| SECRET_KEY                  | App secret key                | your-secret-key-here-change-in-production    |
-| ALGORITHM                   | JWT algorithm                 | HS256                                        |
-| ACCESS_TOKEN_EXPIRE_MINUTES | JWT token expiry (minutes)    | 43200                                        |
-| ENVIRONMENT                 | Environment name              | development                                  |
-| DEBUG                       | Debug mode                    | true                                         |
-| APP_NAME                    | Application name              | Deita                                        |
-| APP_VERSION                 | Application version           | 0.1.0                                        |
-| DUCKDB_PATH                 | DuckDB file path              | /app/data/deita.duckdb                       |
-| POSTHOG_ENABLED             | Enable Posthog analytics      | false                                        |
-| POSTHOG_API_KEY             | Posthog API key               | (blank for dev)                              |
-| POSTHOG_HOST                | Posthog host                  | https://app.posthog.com                      |
-| AI_MODEL_NAME               | AI model name                 | local-llm                                    |
-| AI_MODEL_ENDPOINT           | AI model endpoint             | http://localhost:8001                        |
-| AI_MODEL_API_KEY            | AI model API key              | (blank for dev)                              |
+| Variable                    | Description                  | Example Value                                |
+| --------------------------- | ---------------------------- | -------------------------------------------- |
+| DATABASE_URL                | PostgreSQL connection string | postgresql://deita:deita@postgres:5432/deita |
+| S3_ENDPOINT                 | MinIO/S3 endpoint            | http://minio:9000                            |
+| S3_ACCESS_KEY               | MinIO/S3 access key          | deita                                        |
+| S3_SECRET_KEY               | MinIO/S3 secret key          | deita123                                     |
+| S3_BUCKET_NAME              | MinIO/S3 bucket name         | deita-files                                  |
+| SMTP_HOST                   | Email server host            | mailhog                                      |
+| SMTP_PORT                   | Email server port            | 1025                                         |
+| SMTP_USER                   | Email server username        | (blank for dev)                              |
+| SMTP_PASSWORD               | Email server password        | (blank for dev)                              |
+| FROM_EMAIL                  | Default sender email         | noreply@deita.app                            |
+| SECRET_KEY                  | App secret key               | your-secret-key-here-change-in-production    |
+| ALGORITHM                   | JWT algorithm                | HS256                                        |
+| ACCESS_TOKEN_EXPIRE_MINUTES | JWT token expiry (minutes)   | 43200                                        |
+| ENVIRONMENT                 | Environment name             | development                                  |
+| DEBUG                       | Debug mode                   | true                                         |
+| APP_NAME                    | Application name             | Deita                                        |
+| APP_VERSION                 | Application version          | 0.1.0                                        |
+| DUCKDB_PATH                 | DuckDB file path             | /app/data/deita.duckdb                       |
+| POSTHOG_ENABLED             | Enable Posthog analytics     | false                                        |
+| POSTHOG_API_KEY             | Posthog API key              | (blank for dev)                              |
+| POSTHOG_HOST                | Posthog host                 | https://app.posthog.com                      |
+| AI_MODEL_NAME               | AI model name                | local-llm                                    |
+| AI_MODEL_ENDPOINT           | AI model endpoint            | http://localhost:8001                        |
+| AI_MODEL_API_KEY            | AI model API key             | (blank for dev)                              |
 
 ### Frontend (`frontend/.env.local`)
 
-| Variable          | Description          | Example Value            |
-| ----------------- | -------------------- | ------------------------ |
-| VITE_API_URL      | Backend API base URL | http://localhost:8000/v1 |
-| VITE_ENVIRONMENT  | Environment name     | development              |
-| VITE_APP_NAME     | Application name     | Deita                    |
-| VITE_POSTHOG_KEY  | Posthog API key      | (blank for dev)          |
-| VITE_POSTHOG_HOST | Posthog host         | https://app.posthog.com  |
+| Variable         | Description          | Example Value            |
+| ---------------- | -------------------- | ------------------------ |
+| VITE_API_URL     | Backend API base URL | http://localhost:8000/v1 |
+| VITE_ENVIRONMENT | Environment name     | development              |
+| VITE_APP_NAME    | Application name     | Deita                    |
 
 ## Production Deployment
 
