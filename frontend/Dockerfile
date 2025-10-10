@@ -9,19 +9,15 @@ COPY package*.json ./
 # Install dependencies (fallback to install if ci fails)
 RUN npm ci 2>/dev/null || npm install
 
-# Copy source code
-COPY . .
-
 # Build arguments for environment variables
 ARG VITE_API_URL
 ARG VITE_ENVIRONMENT
 
-# Set environment variables for build
-ENV VITE_API_URL=${VITE_API_URL}
-ENV VITE_ENVIRONMENT=${VITE_ENVIRONMENT}
+# Copy source code
+COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application with environment variables
+RUN VITE_API_URL=${VITE_API_URL} VITE_ENVIRONMENT=${VITE_ENVIRONMENT} npm run build
 
 # Production stage - serve with nginx
 FROM nginx:alpine AS production
