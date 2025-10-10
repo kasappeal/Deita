@@ -3,7 +3,6 @@ import axios from 'axios'
 // Create axios instance with default configuration
 const apiClient = axios.create({
   baseURL: 'http://localhost:8000',
-  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -79,10 +78,22 @@ export interface Workspace {
   visibility: 'public' | 'private';
   owner?: string;
   created_at: string;
+  storage_used?: number;
+  max_storage?: number;
+  is_orphan?: boolean;
+  is_yours?: boolean;
 }
 
 // API functions
 export const workspaceApi = {
+  updateWorkspace: async (workspaceId: string, data: { name?: string; visibility?: 'public' | 'private' }): Promise<Workspace> => {
+    const response = await apiClient.put(`/v1/workspaces/${workspaceId}`, data);
+    return response.data;
+  },
+  claimWorkspace: async (workspaceId: string): Promise<Workspace> => {
+    const response = await apiClient.post(`/v1/workspaces/${workspaceId}/claim`);
+    return response.data;
+  },
   getFiles: async (workspaceId: string): Promise<FileData[]> => {
     const response = await apiClient.get(`/v1/workspaces/${workspaceId}/files/`);
     return response.data;
@@ -106,7 +117,6 @@ export const workspaceApi = {
   exportQueryAsCsv: async (workspaceId: string, query: string): Promise<Blob> => {
     const response = await apiClient.post(`/v1/workspaces/${workspaceId}/query/csv`, {query}, {
       responseType: 'blob',
-      timeout: 0 // 120000, // 2 minutes timeout for export operations
     });
     return response.data;
   },
@@ -140,6 +150,10 @@ export const workspaceApi = {
   createWorkspace: async (name: string, visibility: 'public' | 'private' = 'public'): Promise<Workspace> => {
     const response = await apiClient.post('/v1/workspaces/', { name, visibility });
     return response.data;
+  },
+
+  deleteWorkspace: async (workspaceId: string): Promise<void> => {
+    await apiClient.delete(`/v1/workspaces/${workspaceId}`);
   },
 };
 
