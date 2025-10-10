@@ -1,4 +1,10 @@
 import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
   Box,
   Button,
   Card,
@@ -13,7 +19,7 @@ import {
   VStack,
   useToast
 } from '@chakra-ui/react';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FiCode, FiDatabase, FiFile, FiFolder, FiLink, FiTrash2, FiUpload, FiZap } from 'react-icons/fi';
 import { FileData, QueryData, workspaceApi } from '../../services/api';
 import ChatInterface from './ChatInterface';
@@ -73,7 +79,19 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('tables');
   const [savedQueries, setSavedQueries] = useState<QueryData[]>([]);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    type: 'file' | 'query';
+    id: string;
+    name: string;
+  }>({
+    isOpen: false,
+    type: 'file',
+    id: '',
+    name: ''
+  });
   const toast = useToast();
+  const cancelRef = useRef<HTMLButtonElement>(null);
 
   const fetchSavedQueries = useCallback(async () => {
     try {
@@ -103,57 +121,79 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
     }
   }, [refreshQueries, activeTab, fetchSavedQueries]);
 
-  const handleDeleteFile = async (fileId: string, fileName: string) => {
-    if (window.confirm(`Are you sure you want to delete "${fileName}"? This action cannot be undone.`)) {
-      try {
-        if (workspaceId) {
-          await workspaceApi.deleteFile(workspaceId, fileId);
-        }
-        onFileDelete?.(fileId);
-        toast({
-          title: 'File deleted successfully',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-      } catch (error) {
-        toast({
-          title: 'Error deleting file',
-          description: 'Please try again later',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-        console.error('Error deleting file:', error);
+  const handleDeleteFile = (fileId: string, fileName: string) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      type: 'file',
+      id: fileId,
+      name: fileName
+    });
+  };
+
+  const confirmDeleteFile = async () => {
+    try {
+      if (workspaceId) {
+        await workspaceApi.deleteFile(workspaceId, deleteConfirmation.id);
       }
+      onFileDelete?.(deleteConfirmation.id);
+      toast({
+        title: 'File deleted successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error deleting file',
+        description: 'Please try again later',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      console.error('Error deleting file:', error);
+    } finally {
+      setDeleteConfirmation({ isOpen: false, type: 'file', id: '', name: '' });
     }
   };
 
-  const handleDeleteQuery = async (queryId: string, queryName: string) => {
-    if (window.confirm(`Are you sure you want to delete the query "${queryName}"? This action cannot be undone.`)) {
-      try {
-        if (workspaceId) {
-          await workspaceApi.deleteQuery(workspaceId, queryId);
-        }
-        // Reload queries after deletion
-        fetchSavedQueries();
-        toast({
-          title: 'Query deleted successfully',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-      } catch (error) {
-        toast({
-          title: 'Error deleting query',
-          description: 'Please try again later',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-        console.error('Error deleting query:', error);
+  const handleDeleteQuery = (queryId: string, queryName: string) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      type: 'query',
+      id: queryId,
+      name: queryName
+    });
+  };
+
+  const confirmDeleteQuery = async () => {
+    try {
+      if (workspaceId) {
+        await workspaceApi.deleteQuery(workspaceId, deleteConfirmation.id);
       }
+      // Reload queries after deletion
+      fetchSavedQueries();
+      toast({
+        title: 'Query deleted successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error deleting query',
+        description: 'Please try again later',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      console.error('Error deleting query:', error);
+    } finally {
+      setDeleteConfirmation({ isOpen: false, type: 'query', id: '', name: '' });
     }
+  };
+
+  const closeDeleteConfirmation = () => {
+    setDeleteConfirmation({ isOpen: false, type: 'file', id: '', name: '' });
   };
 
   const tables: TableItem[] = files.map(file => ({
@@ -450,6 +490,38 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
         </Box>
 
       </VStack>
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog
+        isOpen={deleteConfirmation.isOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={closeDeleteConfirmation}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Delete {deleteConfirmation.type === 'file' ? 'File' : 'Query'}
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              Are you sure you want to delete &ldquo;{deleteConfirmation.name}&rdquo;? This action cannot be undone.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={closeDeleteConfirmation}>
+                Cancel
+              </Button>
+              <Button 
+                colorScheme="red" 
+                onClick={deleteConfirmation.type === 'file' ? confirmDeleteFile : confirmDeleteQuery} 
+                ml={3}
+              >
+                Delete
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 };
