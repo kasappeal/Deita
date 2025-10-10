@@ -15,6 +15,8 @@ export interface Workspace {
   created_at?: string;
   storage_used?: number;
   max_storage?: number;
+  is_orphan?: boolean;
+  is_yours?: boolean;
 }
 
 interface AuthContextType {

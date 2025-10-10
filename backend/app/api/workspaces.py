@@ -13,6 +13,7 @@ from fastapi import APIRouter, Body, Depends, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from app.api.utils import build_workspace_schema
 from app.core.auth import get_current_user, get_current_user_optional
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
@@ -27,7 +28,7 @@ from app.schemas import (
 from app.schemas import Workspace as WorkspaceSchema
 from app.schemas.file import File as FileSchema
 from app.schemas.query import QueryResult
-from app.services.exceptions import BadQuery, WorkspaceNotFound
+from app.services.exceptions import WorkspaceForbidden, WorkspaceNotFound
 from app.services.file_storage import FileStorage
 from app.services.query_service import QueryService
 from app.services.workspace_service import WorkspaceService
@@ -87,12 +88,6 @@ async def execute_query(
         return query_service.execute_query(query_request.query, files, page, count=count) # type: ignore
     except WorkspaceNotFound:
         # If workspace doesn't exist, return null query
-        return QueryResult(columns=[], rows=[], time=0.0)
-    except BadQuery:
-        return QueryResult(columns=[], rows=[], time=0.0)
-    except Exception as e:
-        # Log the error and return null query for other errors
-        print(f"Error executing query: {str(e)}")
         return QueryResult(columns=[], rows=[], time=0.0)
 
 
@@ -254,7 +249,7 @@ async def upload_file(
     updated_workspace = service.get_workspace_by_id(workspace_id)
     return {
         "file": FileSchema.model_validate(file_record),
-        "workspace": WorkspaceSchema.model_validate(updated_workspace)
+        "workspace": build_workspace_schema(updated_workspace, current_user)
     }
 
 
@@ -266,7 +261,7 @@ async def create_workspace(
 ):
     """Create a new workspace."""
     workspace = service.create_workspace(workspace_data, current_user)
-    return workspace
+    return build_workspace_schema(workspace, current_user)
 
 
 @router.get("/", response_model=list[WorkspaceSchema])
@@ -275,7 +270,11 @@ async def list_workspaces(
     service: WorkspaceService = Depends(get_workspace_service),
 ):
     """List workspaces that belong to the authenticated user."""
-    return service.list_workspaces(current_user)
+    workspaces = service.list_workspaces(current_user)
+    result = []
+    for ws in workspaces:
+        result.append(build_workspace_schema(ws, current_user))
+    return result
 
 
 @router.get("/{workspace_id}", response_model=WorkspaceSchema)
@@ -287,11 +286,10 @@ async def get_workspace(
     """Get workspace details by ID."""
     workspace = service.get_workspace_by_id(workspace_id)
     if not service.can_access(workspace, current_user):
-        from app.services.exceptions import WorkspaceNotFound
         raise WorkspaceNotFound("Workspace not found")
     # Optionally update last accessed timestamp
     service.update_last_accessed(workspace)
-    return workspace
+    return build_workspace_schema(workspace, current_user)
 
 
 
@@ -330,10 +328,9 @@ async def update_workspace(
     """Update workspace by ID."""
     workspace = service.get_workspace_by_id(workspace_id)
     if not service.is_owner(workspace, current_user):
-        from app.services.exceptions import WorkspaceForbidden
         raise WorkspaceForbidden("Not authorized to update this workspace")
     updated = service.update_workspace(workspace, workspace_data)
-    return updated
+    return build_workspace_schema(updated, current_user)
 
 
 @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -351,13 +348,14 @@ async def delete_workspace(
     return None
 
 
-@router.post("/{workspace_id}/claim", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/{workspace_id}/claim", status_code=status.HTTP_200_OK, response_model=WorkspaceSchema)
 async def claim_workspace(
     workspace_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     service: WorkspaceService = Depends(get_workspace_service),
-):
+) -> WorkspaceSchema:
     """Claim an orphan workspace."""
     workspace = service.get_workspace_by_id(workspace_id)
     service.claim_workspace(workspace, current_user)
-    return None
+    workspace = service.get_workspace_by_id(workspace_id)
+    return build_workspace_schema(workspace, current_user)

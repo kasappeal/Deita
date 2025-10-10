@@ -9,6 +9,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models import User, Workspace
+from app.schemas import Workspace as WorkspaceSchema
 
 
 def get_workspace_or_404(db: Session, workspace_id: uuid.UUID) -> Workspace:
@@ -54,3 +55,14 @@ def update_last_accessed(db: Session, workspace: Workspace):
     """Update workspace last_accessed_at timestamp."""
     workspace.last_accessed_at = datetime.now(UTC)
     db.commit()
+
+
+def build_workspace_schema(ws, user):
+    owner_id = getattr(ws, "owner_id", None)
+    user_id = getattr(user, "id", None) if user else None
+    is_orphan = owner_id is None
+    is_yours = (owner_id is not None and user_id is not None and owner_id == user_id)
+    ws_dict = ws.__dict__.copy() if hasattr(ws, "__dict__") else dict(ws)
+    ws_dict["is_orphan"] = is_orphan
+    ws_dict["is_yours"] = is_yours
+    return WorkspaceSchema(**ws_dict)  # noqa: F821

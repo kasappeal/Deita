@@ -28,6 +28,8 @@ class Workspace(BaseModel):
     max_file_size: int | None = None
     max_storage: int | None = None
     storage_used: int | None = None
+    is_orphan: bool
+    is_yours: bool
 
     class Config:
         from_attributes = True
