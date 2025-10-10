@@ -3,14 +3,25 @@ import {
   Box,
   Button,
   Flex,
+  FormControl,
+  FormLabel,
   HStack,
   Icon,
   IconButton,
+  Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   Text,
   Tooltip,
+  useDisclosure,
   useToast,
 } from '@chakra-ui/react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FiChevronLeft, FiChevronRight, FiChevronsLeft, FiChevronsRight, FiSave, FiShare } from 'react-icons/fi';
 
 import QueryResultTable, { QueryResultData } from './QueryResultTable';
@@ -36,7 +47,10 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
   const [countLoading, setCountLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [resultsPerPage, setResultsPerPage] = useState<number | null>(null);
+  const [queryName, setQueryName] = useState('');
+  const { isOpen: isSaveModalOpen, onOpen: onSaveModalOpen, onClose: onSaveModalClose } = useDisclosure();
   const toast = useToast();
+  const initialFocusRef = useRef<HTMLInputElement>(null);
 
   // Update internal state when initialResult prop changes (e.g., when switching tables)
   useEffect(() => {
@@ -152,8 +166,12 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
     }
   };
 
-  const handleSaveQuery = async () => {
-    const queryName = prompt('Enter a name for this query:');
+  const handleSaveQuery = () => {
+    setQueryName('');
+    onSaveModalOpen();
+  };
+
+  const handleSaveQueryConfirm = async () => {
     if (!queryName || !queryName.trim()) {
       return;
     }
@@ -169,6 +187,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
         isClosable: true,
       });
       onQuerySaved?.();
+      onSaveModalClose();
     } catch (error) {
       console.error('Save Query Error:', error);
       toast({
@@ -181,6 +200,11 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSaveModalClose = () => {
+    setQueryName('');
+    onSaveModalClose();
   };
 
   const handleExport = async () => {
@@ -361,6 +385,44 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
       <Box flex={1} overflowY="auto">
         <QueryResultTable result={result} isLoading={exporting} />
       </Box>
+
+      {/* Save Query Modal */}
+      <Modal isOpen={isSaveModalOpen} onClose={handleSaveModalClose} isCentered initialFocusRef={initialFocusRef}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Save Query</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <FormControl>
+              <FormLabel>Query Name</FormLabel>
+              <Input
+                ref={initialFocusRef}
+                placeholder="Enter a name for this query"
+                value={queryName}
+                onChange={(e) => setQueryName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && queryName.trim()) {
+                    handleSaveQueryConfirm();
+                  }
+                }}
+              />
+            </FormControl>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={handleSaveModalClose}>
+              Cancel
+            </Button>
+            <Button
+              colorScheme="blue"
+              onClick={handleSaveQueryConfirm}
+              isLoading={saving}
+              isDisabled={!queryName.trim()}
+            >
+              Save Query
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };
