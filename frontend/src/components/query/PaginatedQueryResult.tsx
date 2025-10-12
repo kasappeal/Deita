@@ -256,30 +256,33 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
     if (totalCount !== null) {
       // When we have total count, show more precise pagination info
       const pageSize = resultsPerPage || rowCount;
+      const formattedTotal = totalCount.toLocaleString();
       
       if (currentPage === 1 && !result.has_more) {
         // Single page with all results
-        return `Showing 1 to ${rowCount} rows of`;
+        return `Showing 1 to ${rowCount} of ${formattedTotal}`;
       } else if (currentPage === 1) {
         // First page with more results
-        return `Showing 1 to ${rowCount} rows of`;
+        return `Showing 1 to ${rowCount} of ${formattedTotal}`;
       } else {
         // Subsequent pages
         const startRow = (currentPage - 1) * pageSize + 1;
         const endRow = startRow + rowCount - 1;
-        return `Showing ${startRow} to ${endRow} rows of`;
+        return `Showing ${startRow} to ${endRow} of ${formattedTotal}`;
       }
     } else {
-      // Fallback to original pagination messages when count is not available
+      // Fallback to pagination messages when count is not available
       if (currentPage === 1) {
         return `Showing first ${rowCount} rows of`;
       } else if (result.has_more) {
+        // Middle pages - calculate based on results per page
         const pageSize = resultsPerPage || rowCount;
         const startRow = (currentPage - 1) * pageSize + 1;
         const endRow = startRow + rowCount - 1;
-        return `Showing ${startRow} to ${endRow} rows of`;
+        return `Showing rows ${startRow} to ${endRow}`;
       } else {
-        return `Showing last ${rowCount} rows of`;
+        // Last page
+        return `Showing last ${rowCount} rows`;
       }
     }
   };

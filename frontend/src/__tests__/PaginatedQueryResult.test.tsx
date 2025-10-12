@@ -34,6 +34,21 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 describe('PaginatedQueryResult', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Set up default mock behavior for executeQuery
+    mockExecuteQuery.mockImplementation((_workspaceId, _query, _page, _signal, count = false) => {
+      if (count) {
+        // Count query - return count result
+        return Promise.resolve({
+          columns: ['count'],
+          rows: [[1500]],
+          has_more: false,
+          time: 0.001,
+        });
+      } else {
+        // Regular query - return mock data
+        return Promise.resolve(mockResult);
+      }
+    });
   });
 
   it('renders initial results with pagination message', () => {
@@ -48,7 +63,7 @@ describe('PaginatedQueryResult', () => {
     );
 
     // Check that the pagination message is displayed
-    expect(screen.getByText('Showing first 3 rows')).toBeInTheDocument();
+    expect(screen.getByText('Showing first 3 rows of')).toBeInTheDocument();
     
     // Check that table data is displayed
     expect(screen.getByText('Test 1')).toBeInTheDocument();
@@ -122,7 +137,7 @@ describe('PaginatedQueryResult', () => {
 
     // Initially shows ? for count
     expect(screen.getByText('?')).toBeInTheDocument();
-    expect(screen.getByText('Showing first 3 rows')).toBeInTheDocument();
+    expect(screen.getByText('Showing first 3 rows of')).toBeInTheDocument();
 
     // Click the count button
     fireEvent.click(screen.getByText('?'));
@@ -150,14 +165,14 @@ describe('PaginatedQueryResult', () => {
       </TestWrapper>
     );
 
-    expect(screen.getByText('Showing first 3 rows')).toBeInTheDocument();
+    expect(screen.getByText('Showing first 3 rows of')).toBeInTheDocument();
 
-    // Check that navigation buttons are rendered
-    expect(screen.getByText('Previous')).toBeInTheDocument();
+    // Check that navigation buttons are rendered and use aria-labels, not text
+    expect(screen.getByRole('button', { name: /previous results/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /next results/i })).toBeInTheDocument();
 
     // Check that Previous button is disabled (page 1)
-    expect(screen.getByText('Previous')).toBeDisabled();
+    expect(screen.getByRole('button', { name: /previous results/i })).toBeDisabled();
 
     // Check that Next button is enabled (has_more = true)
     expect(screen.getByRole('button', { name: /next results/i })).not.toBeDisabled();
@@ -174,7 +189,21 @@ describe('PaginatedQueryResult', () => {
       time: 0.05,
     };
 
-    mockExecuteQuery.mockResolvedValueOnce(nextPageResult);
+    // Override the default mock for this test
+    mockExecuteQuery.mockImplementation((_workspaceId, _query, page, _signal, count = false) => {
+      if (count) {
+        return Promise.resolve({
+          columns: ['count'],
+          rows: [[1500]],
+          has_more: false,
+          time: 0.001,
+        });
+      } else if (page === 2) {
+        return Promise.resolve(nextPageResult);
+      } else {
+        return Promise.resolve(mockResult);
+      }
+    });
 
     render(
       <TestWrapper>
@@ -212,7 +241,21 @@ describe('PaginatedQueryResult', () => {
       time: 0.08,
     };
 
-    mockExecuteQuery.mockResolvedValueOnce(middlePageResult);
+    // Override the default mock for this test
+    mockExecuteQuery.mockImplementation((_workspaceId, _query, page, _signal, count = false) => {
+      if (count) {
+        return Promise.resolve({
+          columns: ['count'],
+          rows: [[1500]],
+          has_more: false,
+          time: 0.001,
+        });
+      } else if (page === 2) {
+        return Promise.resolve(middlePageResult);
+      } else {
+        return Promise.resolve(mockResult);
+      }
+    });
 
     render(
       <TestWrapper>
@@ -232,12 +275,26 @@ describe('PaginatedQueryResult', () => {
     });
 
     // Both buttons should be enabled on middle page
-    expect(screen.getByText('Previous')).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /previous results/i })).not.toBeDisabled();
     expect(screen.getByRole('button', { name: /next results/i })).not.toBeDisabled();
   });
 
   it('handles API errors gracefully', async () => {
-    mockExecuteQuery.mockRejectedValueOnce(new Error('API Error'));
+    // Override the default mock for this test to throw error on page 2
+    mockExecuteQuery.mockImplementation((_workspaceId, _query, page, _signal, count = false) => {
+      if (count) {
+        return Promise.resolve({
+          columns: ['count'],
+          rows: [[1500]],
+          has_more: false,
+          time: 0.001,
+        });
+      } else if (page === 2) {
+        return Promise.reject(new Error('API Error'));
+      } else {
+        return Promise.resolve(mockResult);
+      }
+    });
 
     render(
       <TestWrapper>
@@ -250,7 +307,7 @@ describe('PaginatedQueryResult', () => {
     );
 
     // Click Next button
-    fireEvent.click(screen.getByText('Next'));
+    fireEvent.click(screen.getByRole('button', { name: /next results/i }));
 
     // Wait for error handling
     await waitFor(() => {
@@ -258,6 +315,6 @@ describe('PaginatedQueryResult', () => {
     });
 
     // Should still show original results
-    expect(screen.getByText('Showing first 3 rows')).toBeInTheDocument();
+    expect(screen.getByText('Showing first 3 rows of')).toBeInTheDocument();
   });
 });
