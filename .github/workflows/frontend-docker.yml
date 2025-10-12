@@ -17,6 +17,7 @@ env:
 
 jobs:
   build-and-push:
+    environment: production
     name: Build and Push Frontend Docker Image
     runs-on: ubuntu-latest
     permissions:
@@ -62,8 +63,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VITE_API_URL=${{ secrets.VITE_API_URL }}
-            VITE_ENVIRONMENT=${{ secrets.VITE_ENVIRONMENT }}
+            VITE_API_URL=${{ env.VITE_API_URL }}
+            VITE_ENVIRONMENT=${{ env.VITE_ENVIRONMENT }}
 
       - name: Image digest
         run: echo ${{ steps.meta.outputs.tags }}
