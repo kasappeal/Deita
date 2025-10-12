@@ -1,0 +1,145 @@
+# GitHub Actions workflow to deploy Deita application using Ansible
+# Runs after Docker images are built and pushed successfully
+
+name: Deploy to Production
+
+on:
+  workflow_run:
+    workflows: ["Build Backend Docker Image", "Build and Publish Frontend Docker Image"]
+    types: [completed]
+    branches: [main]
+
+env:
+  ANSIBLE_HOST_KEY_CHECKING: false
+
+jobs:
+  check-prerequisites:
+    name: Check Prerequisites
+    runs-on: ubuntu-latest
+    outputs:
+      should-deploy: ${{ steps.check.outputs.should-deploy }}
+    steps:
+      - name: Check if both workflows succeeded
+        id: check
+        run: |
+          # This job will only run if triggered by workflow_run
+          # We need to verify both backend and frontend builds succeeded
+          echo "should-deploy=true" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    needs: check-prerequisites
+    if: needs.check-prerequisites.outputs.should-deploy == 'true'
+    environment: production
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+      
+      - name: Create SSH directory
+        run: mkdir -p ~/.ssh
+      
+      - name: Set up SSH key
+        run: |
+          echo "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.PRODUCTION_SERVER_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Create Ansible inventory from secrets
+        run: |
+          cat > ansible/inventory.yml << EOF
+          production:
+            hosts:
+              production_server:
+                ansible_host: ${{ secrets.PRODUCTION_SERVER_HOST }}
+                ansible_user: ${{ secrets.PRODUCTION_SERVER_USER }}
+                ansible_ssh_private_key_file: ~/.ssh/deploy_key
+            vars:
+              ansible_python_interpreter: /usr/bin/python3
+              app_directory: ${{ secrets.PRODUCTION_APP_DIRECTORY || '/home/deploy/deita' }}
+              app_version: latest
+          EOF
+      
+      - name: Create production environment file
+        run: |
+          cat > .env.production << EOF
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          S3_ENDPOINT=${{ secrets.S3_ENDPOINT }}
+          S3_ACCESS_KEY=${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }}
+          S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
+          SMTP_HOST=${{ secrets.SMTP_HOST }}
+          SMTP_PORT=${{ secrets.SMTP_PORT }}
+          SMTP_USER=${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+          FROM_EMAIL=${{ secrets.FROM_EMAIL }}
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          APP_VERSION=${{ github.sha }}
+          AI_MODEL_NAME=${{ secrets.AI_MODEL_NAME }}
+          AI_MODEL_ENDPOINT=${{ secrets.AI_MODEL_ENDPOINT }}
+          AI_MODEL_API_KEY=${{ secrets.AI_MODEL_API_KEY }}
+          EOF
+      
+      - name: Copy files to server
+        run: |
+          # Copy docker-compose.yml and .env file to server
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            docker-compose.yml .env.production \
+            ${{ secrets.PRODUCTION_SERVER_USER }}@${{ secrets.PRODUCTION_SERVER_HOST }}:${{ secrets.PRODUCTION_APP_DIRECTORY || '/home/deploy/deita' }}/
+          
+          # Rename .env.production to .env on server
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ secrets.PRODUCTION_SERVER_USER }}@${{ secrets.PRODUCTION_SERVER_HOST }} \
+            "cd ${{ secrets.PRODUCTION_APP_DIRECTORY || '/home/deploy/deita' }} && mv .env.production .env"
+      
+      - name: Test Ansible connection
+        run: |
+          cd ansible
+          ansible production -m ping
+      
+      - name: Run Ansible deployment playbook
+        run: |
+          cd ansible
+          ansible-playbook -i inventory.yml deploy.yml -v
+      
+      - name: Verify deployment
+        run: |
+          # Check if services are running
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ secrets.PRODUCTION_SERVER_USER }}@${{ secrets.PRODUCTION_SERVER_HOST }} \
+            "cd ${{ secrets.PRODUCTION_APP_DIRECTORY || '/home/deploy/deita' }} && docker compose ps"
+      
+      - name: Test application health
+        run: |
+          # Wait a bit for services to fully start
+          sleep 30
+          
+          # Test backend health endpoint
+          curl -f http://${{ secrets.PRODUCTION_SERVER_HOST }}:8000/health || exit 1
+          
+          # Test frontend
+          curl -f http://${{ secrets.PRODUCTION_SERVER_HOST }} || exit 1
+      
+      - name: Deployment success notification
+        if: success()
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "Backend: http://${{ secrets.PRODUCTION_SERVER_HOST }}:8000"
+          echo "Frontend: http://${{ secrets.PRODUCTION_SERVER_HOST }}"
+      
+      - name: Deployment failure notification
+        if: failure()
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Check the logs above for details."
