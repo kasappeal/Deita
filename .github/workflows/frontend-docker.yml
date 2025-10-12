@@ -47,12 +47,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
@@ -69,6 +66,3 @@ jobs:
             VITE_API_URL=${{ env.VITE_API_URL }}
             VITE_ENVIRONMENT=production
             VITE_APP_NAME=Deita
-
-      - name: Image digest
-        run: echo ${{ steps.meta.outputs.tags }}

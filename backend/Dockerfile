@@ -45,8 +45,8 @@ RUN apt-get update && \
     groupadd -r deita && \
     useradd -r -g deita deita
 
-# Copy dependency files
-COPY pyproject.toml uv.lock ./
+# Copy dependency files and README (required by package metadata)
+COPY pyproject.toml uv.lock README.md ./
 
 # Install only production dependencies
 RUN uv sync --no-dev
