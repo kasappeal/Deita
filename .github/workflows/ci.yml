@@ -32,7 +32,7 @@ jobs:
           - 9000:9000
           - 9001:9001
         options: >-
-          --health-cmd="curl -f http://localhost:9000/minio/health/live || exit 1" --health-interval=10s --health-timeout=5s --health-retries=5 server /data --console-address ":9001"
+          --health-cmd="curl -f http://localhost:9000/minio/health/live || exit 1" --health-interval=10s --health-timeout=5s --health-retries=5
     env:
       DATABASE_URL: postgresql://deita:deita@localhost:5432/deita
       S3_ENDPOINT: http://localhost:9000
