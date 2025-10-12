@@ -28,7 +28,7 @@ jobs:
       S3_ENDPOINT: http://localhost:9000
       S3_BUCKET_NAME: deita
       S3_ACCESS_KEY: deita
-      S3_SECRET_KEY: deita12345678
+      S3_SECRET_KEY: deita123
       SECRET_KEY: testsecret
       ALGORITHM: HS256
       ENVIRONMENT: test
