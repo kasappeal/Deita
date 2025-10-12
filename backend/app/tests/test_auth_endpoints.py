@@ -12,7 +12,8 @@ from app.tests import APITest
 class TestMagicLinkRequest(APITest):
     """Tests for POST /v1/auth/magic-link endpoint."""
 
-    def test_request_magic_link_new_user(self):
+    @patch("app.services.auth_service.AuthService.send_magic_link")
+    def test_request_magic_link_new_user(self, mock_send_magic_link):
         """Test requesting magic link for a new user creates the user."""
         email = "newuser@example.com"
 
@@ -23,8 +24,10 @@ class TestMagicLinkRequest(APITest):
         assert response.status_code == 200
         data = response.json()
         assert data["message"] == "Magic link sent to your email."
+        mock_send_magic_link.assert_called_once_with(email, "http://localhost:3000")
 
-    def test_request_magic_link_existing_user(self):
+    @patch("app.services.auth_service.AuthService.send_magic_link")
+    def test_request_magic_link_existing_user(self, mock_send_magic_link):
         """Test requesting magic link for existing user."""
         email = "existing@example.com"
 
@@ -38,6 +41,7 @@ class TestMagicLinkRequest(APITest):
         assert response.status_code == 200
         data = response.json()
         assert data["message"] == "Magic link sent to your email."
+        mock_send_magic_link.assert_called_once_with(email, "http://localhost:3000")
 
     def test_request_magic_link_invalid_email(self):
         """Test requesting magic link with invalid email format."""
