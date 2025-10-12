@@ -52,12 +52,6 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            # Use branch name for branch pushes
-            type=ref,event=branch
-            # Use PR number for pull requests
-            type=ref,event=pr
-            # Add commit SHA for traceability
-            type=sha,prefix={{branch}}-
             # Add latest tag for main branch
             type=raw,value=latest,enable={{is_default_branch}}
       
@@ -66,13 +60,9 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
-          target: production
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
-      
-      - name: Image digest
-        run: echo "Image pushed with digest ${{ steps.meta.outputs.digest }}"
