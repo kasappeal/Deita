@@ -24,11 +24,10 @@ jobs:
         options: >-
           --health-cmd="pg_isready -U deita" --health-interval=10s --health-timeout=5s --health-retries=5
       minio:
-        image: bitnami/minio:latest
+        image: minio/minio:latest
         env:
-          MINIO_DEFAULT_BUCKETS: deita
           MINIO_ROOT_USER: deita
-          MINIO_ROOT_PASSWORD: deita12345678
+          MINIO_ROOT_PASSWORD: deita123
         ports:
           - 9000:9000
         options: >-
