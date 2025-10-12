@@ -342,18 +342,17 @@ async def delete_workspace(
     """Delete workspace by ID."""
     workspace = service.get_workspace_by_id(workspace_id)
     if not service.is_owner(workspace, current_user):
-        from app.services.exceptions import WorkspaceForbidden
         raise WorkspaceForbidden("Not authorized to delete this workspace")
     service.delete_workspace(workspace)
     return None
 
 
-@router.post("/{workspace_id}/claim", status_code=status.HTTP_200_OK, response_model=WorkspaceSchema)
+@router.post("/{workspace_id}/claim", status_code=status.HTTP_204_NO_CONTENT)
 async def claim_workspace(
     workspace_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     service: WorkspaceService = Depends(get_workspace_service),
-) -> WorkspaceSchema:
+):
     """Claim an orphan workspace."""
     workspace = service.get_workspace_by_id(workspace_id)
     service.claim_workspace(workspace, current_user)
