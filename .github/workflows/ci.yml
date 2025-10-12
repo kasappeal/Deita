@@ -23,16 +23,6 @@ jobs:
         ports: [5432:5432]
         options: >-
           --health-cmd="pg_isready -U deita" --health-interval=10s --health-timeout=5s --health-retries=5
-      minio:
-        image: minio/minio:latest
-        env:
-          MINIO_ROOT_USER: deita
-          MINIO_ROOT_PASSWORD: deita123
-        ports:
-          - 9000:9000
-          - 9001:9001
-        options: >-
-          --health-cmd="curl -f http://localhost:9000/minio/health/live || exit 1" --health-interval=10s --health-timeout=5s --health-retries=5
     env:
       DATABASE_URL: postgresql://deita:deita@localhost:5432/deita
       S3_ENDPOINT: http://localhost:9000
@@ -46,6 +36,19 @@ jobs:
       DUCKDB_PATH: /tmp/deita.duckdb
     steps:
       - uses: actions/checkout@v4
+      - name: Start MinIO
+        run: |
+          docker run -d \
+            --name minio \
+            -p 9000:9000 \
+            -p 9001:9001 \
+            -e MINIO_ROOT_USER=deita \
+            -e MINIO_ROOT_PASSWORD=deita123 \
+            minio/minio:latest \
+            server /data --console-address ":9001"
+      - name: Wait for MinIO to be ready
+        run: |
+          timeout 30 bash -c 'until curl -f http://localhost:9000/minio/health/live; do sleep 2; done'
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
