@@ -1,5 +1,5 @@
 import { Box, Button, CircularProgress, Flex, FormControl, FormLabel, Heading, HStack, Icon, IconButton, Input, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Select, Tooltip, useDisclosure, useToast } from '@chakra-ui/react';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 
 import { FiAlertTriangle, FiGlobe, FiGrid, FiLock, FiPlus, FiSettings } from 'react-icons/fi';
@@ -20,7 +20,7 @@ const WorkspaceSettingsModal: React.FC<{
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
-  React.useEffect(() => {
+  useEffect(() => {
     setName(workspace?.name || '');
     setVisibility(workspace?.visibility || 'public');
   }, [workspace, isOpen]);
@@ -102,7 +102,7 @@ const Header: React.FC = () => {
 
   // Workspace state for modal updates
   const [workspaceState, setWorkspaceState] = useState(workspace);
-  React.useEffect(() => {
+  useEffect(() => {
     setWorkspaceState(workspace);
   }, [workspace]);
 
@@ -170,11 +170,11 @@ const Header: React.FC = () => {
   };
 
   // Distinguish between workspaces list page and individual workspace page
-  const isWorkspacesListPage = React.useMemo(() => location.pathname === '/workspaces' || location.pathname === '/workspaces/', [location.pathname]);
-  const isIndividualWorkspacePage = React.useMemo(() => /^\/workspaces\/[^/]+$/.test(location.pathname), [location.pathname]);
+  const isWorkspacesListPage = useMemo(() => location.pathname === '/workspaces' || location.pathname === '/workspaces/', [location.pathname]);
+  const isIndividualWorkspacePage = useMemo(() => /^\/workspaces\/[^/]+$/.test(location.pathname), [location.pathname]);
 
   // Clear workspace context when navigating to workspaces list page
-  React.useEffect(() => {
+  useEffect(() => {
     if (isWorkspacesListPage && workspace) {
       setWorkspace(null);
     }

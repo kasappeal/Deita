@@ -64,10 +64,13 @@ describe('App', () => {
       </TestWrapper>
     )
     
-    expect(screen.getByText('Deita')).toBeInTheDocument()
+    expect(screen.getByText('Your workspaces - Deita')).toBeInTheDocument()
   })
 
   it('displays the workspace header', async () => {
+    // Setup: navigate to a specific workspace
+    window.history.pushState({}, 'Test Workspace', '/workspaces/ws_test');
+    
     render(
       <TestWrapper>
         <App />
