@@ -4,8 +4,12 @@ import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from 'react-query'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
+import { validateEnvironment } from './config/env'
 import { AuthProvider } from './contexts/AuthContext'
 import './index.css'
+
+// Validate environment configuration on startup
+validateEnvironment()
 
 // Create a query client for react-query
 const queryClient = new QueryClient({

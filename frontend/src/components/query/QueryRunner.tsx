@@ -35,9 +35,12 @@ const QueryRunner: React.FC<QueryRunnerProps> = ({ workspaceId, query, setQuery,
     } catch (err) {
       onResult?.(null);
       console.error('Query Error:', err);
+      const errorMessage = err instanceof Error && 'response' in err 
+        ? (err as { response?: { data?: { error?: string } } }).response?.data?.error 
+        : undefined;
       toast({
         title: 'Query Error',
-        description:  err.response?.data?.error.replace(/\u001b\[[0-9;]*m/g, '💥') || 'Failed to run query.',
+        description: errorMessage?.replace(/\\x1b\[[0-9;]*m/g, '💥') || 'Failed to run query.',
         status: 'error',
         duration: 10000,
         isClosable: true,

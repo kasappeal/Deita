@@ -14,6 +14,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/frontend
 
+
 jobs:
   build-and-push:
     environment: production
@@ -66,7 +67,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             VITE_API_URL=${{ env.VITE_API_URL }}
-            VITE_ENVIRONMENT=${{ env.VITE_ENVIRONMENT }}
+            VITE_ENVIRONMENT=production
+            VITE_APP_NAME=Deita
 
       - name: Image digest
         run: echo ${{ steps.meta.outputs.tags }}
