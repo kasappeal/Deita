@@ -89,37 +89,32 @@
         group: "{{ ansible_user }}"
         mode: '0755'
     
-    - name: Change to application directory
-      command: cd "{{ app_directory }}"
-      register: cd_result
-      changed_when: false
-    
     - name: Pull latest Docker images
-      shell: |
-        cd "{{ app_directory }}"
-        docker compose pull
+      shell: docker compose pull
+      args:
+        chdir: "{{ app_directory }}"
       register: pull_result
       changed_when: "'Pulling' in pull_result.stdout"
     
     - name: Start/restart application containers
-      shell: |
-        cd "{{ app_directory }}"
-        docker compose up -d
+      shell: docker compose up -d
+      args:
+        chdir: "{{ app_directory }}"
       register: up_result
     
     - name: Wait for backend container to be healthy
-      shell: |
-        cd "{{ app_directory }}"
-        docker compose ps --filter "name=backend" --format json
+      shell: docker compose ps --filter "name=backend" --format json
+      args:
+        chdir: "{{ app_directory }}"
       register: backend_status
       until: "'healthy' in backend_status.stdout or 'running' in backend_status.stdout"
       retries: 30
       delay: 10
     
     - name: Run database migrations
-      shell: |
-        cd "{{ app_directory }}"
-        docker compose exec -T backend alembic upgrade head
+      shell: docker compose exec -T backend alembic upgrade head
+      args:
+        chdir: "{{ app_directory }}"
       register: migration_result
     
     - name: Display deployment results
@@ -131,9 +126,9 @@
           Migration result: {{ migration_result.stdout }}
     
     - name: Verify application is running
-      shell: |
-        cd "{{ app_directory }}"
-        docker compose ps
+      shell: docker compose ps
+      args:
+        chdir: "{{ app_directory }}"
       register: ps_result
     
     - name: Show running containers
