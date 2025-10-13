@@ -56,9 +56,23 @@ jobs:
       
       - name: Set up SSH key
         run: |
-          echo "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          # Write SSH key with proper formatting and newlines
+          echo "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/deploy_key
+          
+          # Ensure proper permissions before any SSH operations
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.PRODUCTION_SERVER_HOST }} >> ~/.ssh/known_hosts
+          chmod 700 ~/.ssh
+          
+          # Add known hosts with proper error handling
+          ssh-keyscan -H ${{ secrets.PRODUCTION_SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || echo "Warning: Could not add host key"
+          
+          # Verify key format and permissions
+          echo "SSH key permissions:"
+          ls -la ~/.ssh/deploy_key
+          echo "SSH key first line (should start with -----BEGIN):"
+          head -n1 ~/.ssh/deploy_key
+          echo "SSH key last line (should end with -----END):"
+          tail -n1 ~/.ssh/deploy_key
       
       - name: Create Ansible inventory from secrets
         run: |
@@ -95,17 +109,30 @@ jobs:
           AI_MODEL_API_KEY=${{ secrets.AI_MODEL_API_KEY }}
           EOF
       
+      - name: Test SSH connection first
+        run: |
+          # Test basic SSH connectivity with detailed debugging
+          echo "Testing SSH connection..."
+          ssh -v -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 -o BatchMode=yes \
+            ${{ secrets.PRODUCTION_SERVER_USER }}@${{ secrets.PRODUCTION_SERVER_HOST }} \
+            "echo 'SSH connection successful'; whoami; pwd"
+      
       - name: Copy files to server
         run: |
-          # Copy docker-compose.yml and .env file to server
+          # Copy docker-compose.yml and .env file to server with improved error handling
+          echo "Copying files to server..."
           scp -v -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 -o BatchMode=yes \
             docker-compose.yml .env.production \
             ${{ secrets.PRODUCTION_SERVER_USER }}@${{ secrets.PRODUCTION_SERVER_HOST }}:${{ secrets.PRODUCTION_APP_DIRECTORY }}/
           
           # Rename .env.production to .env on server
+          echo "Renaming environment file..."
           ssh -v -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 -o BatchMode=yes \
             ${{ secrets.PRODUCTION_SERVER_USER }}@${{ secrets.PRODUCTION_SERVER_HOST }} \
-            "cd ${{ secrets.PRODUCTION_APP_DIRECTORY }} && mv .env.production .env"
+            "cd ${{ secrets.PRODUCTION_APP_DIRECTORY }} && mv .env.production .env && ls -la .env"
       
       - name: Test Ansible connection
         run: |
@@ -121,6 +148,7 @@ jobs:
         run: |
           # Check if services are running
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 -o BatchMode=yes \
             ${{ secrets.PRODUCTION_SERVER_USER }}@${{ secrets.PRODUCTION_SERVER_HOST }} \
             "cd ${{ secrets.PRODUCTION_APP_DIRECTORY }} && docker compose ps"
       
@@ -147,3 +175,14 @@ jobs:
         run: |
           echo "❌ Deployment failed!"
           echo "Check the logs above for details."
+          echo ""
+          echo "Common SSH issues:"
+          echo "1. Ensure DEPLOY_SSH_PRIVATE_KEY contains the complete private key with headers/footers"
+          echo "2. Verify the corresponding public key is in ~/.ssh/authorized_keys on the server"
+          echo "3. Check server SSH configuration allows public key authentication"
+          echo "4. Ensure proper file permissions on server: ~/.ssh (700), ~/.ssh/authorized_keys (600)"
+          echo ""
+          echo "To debug:"
+          echo "1. Check if public key fingerprint matches: ssh-keygen -l -f ~/.ssh/deploy_key"
+          echo "2. Test SSH connection manually with the same key"
+          echo "3. Check server SSH logs: sudo journalctl -u ssh -f"
