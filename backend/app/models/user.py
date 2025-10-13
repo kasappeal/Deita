@@ -21,6 +21,7 @@ class User(Base):
 
     # Relationships
     workspaces = relationship("Workspace", back_populates="owner")
+    chat_messages = relationship("ChatMessage", back_populates="user")
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"

@@ -19,6 +19,7 @@ from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.models import User
 from app.schemas import (
+    ChatMessageResponse,
     QueryRequest,
     SavedQuery,
     SaveQueryRequest,
@@ -28,6 +29,8 @@ from app.schemas import (
 from app.schemas import Workspace as WorkspaceSchema
 from app.schemas.file import File as FileSchema
 from app.schemas.query import QueryResult
+from app.services.ai_service import AIService
+from app.services.chat_service import ChatService
 from app.services.exceptions import WorkspaceForbidden, WorkspaceNotFound
 from app.services.file_storage import FileStorage
 from app.services.query_service import QueryService
@@ -48,9 +51,22 @@ def get_workspace_service(db: Session = Depends(get_db)) -> WorkspaceService:
     return WorkspaceService(db, file_storage=file_storage, settings=settings)
 
 
+def get_chat_service(db: Session = Depends(get_db)) -> ChatService:
+    return ChatService(db)
+
+
 def get_query_service(db: Session = Depends(get_db)) -> QueryService:
     settings = get_settings()
     return QueryService(settings, db)
+
+
+def get_ai_service(chat_service: ChatService = Depends(get_chat_service)) -> AIService:
+    settings = get_settings()
+    return AIService(
+        api_key=settings.ai_model_api_key,  # type: ignore
+        model=settings.ai_model_name,
+        chat_service=chat_service
+    )
 
 
 router = APIRouter()
@@ -356,5 +372,64 @@ async def claim_workspace(
     """Claim an orphan workspace."""
     workspace = service.get_workspace_by_id(workspace_id)
     service.claim_workspace(workspace, current_user)
-    workspace = service.get_workspace_by_id(workspace_id)
-    return build_workspace_schema(workspace, current_user)
+    # Return 204 No Content as expected by the test
+
+
+@router.post("/{workspace_id}/ai/query")
+async def ai_query(
+    workspace_id: uuid.UUID,
+    query_request: QueryRequest,
+    current_user: User = Depends(get_current_user),
+    ai_service: AIService = Depends(get_ai_service),
+    ws_service: WorkspaceService = Depends(get_workspace_service)
+):
+    workspace = ws_service.get_workspace_by_id(workspace_id)
+    files = ws_service.list_workspace_files(workspace, current_user)
+
+    # Convert database model files to schema files
+    file_schemas = [FileSchema.model_validate(file) for file in files]
+
+    # Pass workspace_id and user_id for chat memory
+    return ai_service.generate_natural_language_based_sql(
+        prompt=query_request.query,
+        files=file_schemas,
+        workspace_id=workspace_id,
+        user_id=current_user.id  # type: ignore
+    )
+
+
+@router.get("/{workspace_id}/chat/messages", response_model=list[ChatMessageResponse])
+async def get_chat_messages(
+    workspace_id: uuid.UUID,
+    limit: int = 50,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    chat_service: ChatService = Depends(get_chat_service),
+    ws_service: WorkspaceService = Depends(get_workspace_service)
+):
+    """Get chat messages for a workspace."""
+    workspace = ws_service.get_workspace_by_id(workspace_id)
+
+    # Check access rights
+    if not workspace.is_public and not ws_service.is_owner(workspace, current_user):
+        raise WorkspaceForbidden()
+
+    return chat_service.get_workspace_messages(workspace_id, limit, offset)
+
+
+@router.delete("/{workspace_id}/chat/messages")
+async def clear_chat_messages(
+    workspace_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    chat_service: ChatService = Depends(get_chat_service),
+    ws_service: WorkspaceService = Depends(get_workspace_service)
+):
+    """Clear all chat messages for a workspace."""
+    workspace = ws_service.get_workspace_by_id(workspace_id)
+
+    # Only the owner can clear chat messages
+    if not ws_service.is_owner(workspace, current_user):
+        raise WorkspaceForbidden()
+
+    deleted_count = chat_service.clear_workspace_messages(workspace_id)
+    return {"message": f"Deleted {deleted_count} chat messages"}

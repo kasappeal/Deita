@@ -41,6 +41,7 @@ class Workspace(Base):
     # Relationships
     owner = relationship("User", back_populates="workspaces")
     queries = relationship("Query", back_populates="workspace", cascade="all, delete-orphan")
+    chat_messages = relationship("ChatMessage", back_populates="workspace", cascade="all, delete-orphan")
 
     @property
     def is_orphaned(self) -> bool:
