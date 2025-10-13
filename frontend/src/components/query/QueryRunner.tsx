@@ -68,7 +68,7 @@ const QueryRunner: React.FC<QueryRunnerProps> = ({ workspaceId, query, setQuery,
       <form onSubmit={handleSubmit}>
         <Flex gap={2} align="center">
           <Textarea
-            placeholder="What do you want to know?"
+            placeholder="Click in and join files or ask AI for your data"
             value={sqlQuery}
             onChange={e => setSqlQuery(e.target.value)}
             isDisabled={queryLoading}

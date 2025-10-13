@@ -66,6 +66,15 @@ export interface QueryResult {
   has_more: boolean;
 }
 
+export interface AIQueryResult {
+  sql_query?: string;
+  confidence?: number;
+  is_sql_translatable?: boolean;
+  tables_used?: string[];
+  answer?: string;
+  missing_information?: string[];
+}
+
 export interface QueryData {
   id: string;
   name: string;
@@ -83,6 +92,17 @@ export interface Workspace {
   max_storage?: number;
   is_orphan?: boolean;
   is_yours?: boolean;
+}
+
+export interface ChatMessage {
+  id: string;
+  content: string;
+  role: 'user' | 'assistant';
+  workspace_id: string;
+  user_id?: string;
+  message_metadata?: Record<string, unknown>;
+  is_sql_query: boolean;
+  created_at: string;
 }
 
 // API functions
@@ -155,6 +175,23 @@ export const workspaceApi = {
 
   deleteWorkspace: async (workspaceId: string): Promise<void> => {
     await apiClient.delete(`/v1/workspaces/${workspaceId}`);
+  },
+
+  // Chat API methods
+  getChatMessages: async (workspaceId: string): Promise<ChatMessage[]> => {
+    const response = await apiClient.get(`/v1/workspaces/${workspaceId}/chat/messages`);
+    return response.data;
+  },
+
+  clearChatMessages: async (workspaceId: string): Promise<void> => {
+    await apiClient.delete(`/v1/workspaces/${workspaceId}/chat/messages`);
+  },
+
+  queryWithAI: async (workspaceId: string, prompt: string): Promise<AIQueryResult> => {
+    const response = await apiClient.post(`/v1/workspaces/${workspaceId}/ai/query`, {
+      query: prompt
+    });
+    return response.data;
   },
 };
 

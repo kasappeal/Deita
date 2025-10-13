@@ -48,6 +48,7 @@ interface TablesSidebarProps {
   onClearJoins?: () => void;
   onQuerySelect?: (query: QueryData) => void;
   refreshQueries?: number; // Signal to refresh saved queries
+  onSqlQuery?: (sqlQuery: string) => void;
 }
 
 // Helper function to format file size
@@ -75,7 +76,8 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
   joinState,
   onClearJoins,
   onQuerySelect,
-  refreshQueries
+  refreshQueries,
+  onSqlQuery
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('tables');
   const [savedQueries, setSavedQueries] = useState<QueryData[]>([]);
@@ -208,182 +210,102 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
     switch (activeTab) {
       case 'tables':
         return (
-          <Stack spacing={2} flex={1}>
-
-            <Button
-              colorScheme="blue"
-              variant="outline"
-              leftIcon={<Icon as={FiUpload} />}
-              onClick={onUploadClick}
-              size="sm"
-              width="full"
-            >
-              Upload Files
-            </Button>
-
-            {joinState && joinState.selectedTables.length > 0 && (
+          <Box p={2}>
+            <Stack spacing={2} flex={1}>
               <Button
-                colorScheme="red"
+                colorScheme="blue"
                 variant="outline"
-                leftIcon={<Icon as={FiTrash2} />}
-                onClick={onClearJoins}
+                leftIcon={<Icon as={FiUpload} />}
+                onClick={onUploadClick}
                 size="sm"
                 width="full"
               >
-                Clear Joins
+                Upload Files
               </Button>
-            )}
 
-            {tables.map((table) => {
-              const isSelected = selectedTableId === table.id;
-              const isInJoin = joinState?.selectedTables.includes(table.id);
-              const showAddToJoinButton = joinState && joinState.selectedTables.length > 0 && !isInJoin;
+              {joinState && joinState.selectedTables.length > 0 && (
+                <Button
+                  colorScheme="red"
+                  variant="outline"
+                  leftIcon={<Icon as={FiTrash2} />}
+                  onClick={onClearJoins}
+                  size="sm"
+                  width="full"
+                >
+                  Clear Joins
+                </Button>
+              )}
 
-              return (
-              <Card
-                key={table.id}
-                cursor="pointer"
-                onClick={() => onTableSelect?.(table.id)}
-                bg={isSelected ? "blue.50" : isInJoin ? "blue.50" : "white"}
-                borderColor={isSelected ? "blue.200" : isInJoin ? "blue.200" : "gray.200"}
-                borderWidth="1px"
-                _hover={{
-                  bg: isSelected ? "blue.50" : isInJoin ? "blue.50" : "gray.50",
-                  borderColor: "blue.300"
-                }}
-                size="sm"
-              >
-                <CardBody p={3} position="relative">
+              {tables.map((table) => {
+                const isSelected = selectedTableId === table.id;
+                const isInJoin = joinState?.selectedTables.includes(table.id);
+                const showAddToJoinButton = joinState && joinState.selectedTables.length > 0 && !isInJoin;
 
-                  {/* Link Button - Top Right */}
-                  {selectedTableId && !isSelected && !isInJoin && (
-                    <Tooltip label="Join with selected file" placement="top">
-                      <IconButton
-                        aria-label="Join files"
-                        icon={<Icon as={FiLink} />}
-                        size="xs"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onJoinStart?.(selectedTableId!, table.id);
-                        }}
-                        position="absolute"
-                        top={2}
-                        right={2}
-                        zIndex={2}
-                      />
-                    </Tooltip>
-                  )}
-
-                  {/* Add to Join Button - Top Right (when joining multiple tables) */}
-                  {showAddToJoinButton && (
-                    <Tooltip label="Add to join" placement="top">
-                      <IconButton
-                        aria-label="Add to join"
-                        icon={<Icon as={FiLink} />}
-                        size="xs"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onJoinAdd?.(table.id);
-                        }}
-                        position="absolute"
-                        top={2}
-                        right={2}
-                        zIndex={2}
-                      />
-                    </Tooltip>
-                  )}
-
-                  {/* Delete Button - Bottom Right */}
-                  <Tooltip label="Delete file" placement="top">
-                    <IconButton
-                      aria-label="Delete file"
-                      icon={<Icon as={FiTrash2} />}
-                      size="xs"
-                      variant="ghost"
-                      colorScheme="red"
-                      onClick={() => handleDeleteFile(table.id, table.fileName)}
-                      position="absolute"
-                      bottom={2}
-                      right={2}
-                      zIndex={1}
-                    />
-                  </Tooltip>
-
-                  <VStack align="stretch" spacing={2}>
-                    {/* Table Name */}
-                    <Flex align="center" gap={2}>
-                      <Text 
-                        fontWeight="medium" 
-                        color="gray.800" 
-                        fontSize="sm"
-                      >
-                        {table.name}
-                      </Text>
-                      {isInJoin && (
-                        <Icon 
-                          as={FiLink} 
-                          color="blue.500" 
-                          boxSize={4}
-                          opacity={0.7}
-                        />
-                      )}
-                    </Flex>
-                    
-                    {/* File Source */}
-                    <Flex align="center" gap={1}>
-                      <Icon as={FiFile} color="gray.500" boxSize={3} />
-                      <Text fontSize="xs" color="gray.500" noOfLines={1}>
-                        {table.fileName}
-                      </Text>
-                    </Flex>
-                    
-                    {/* Stats Row */}
-                    <Flex justify="space-between" fontSize="xs" color="gray.600">
-                      <Flex align="center" gap={1}>
-                        <Icon as={FiDatabase} boxSize={3} />
-                        <Text>{table.rows.toLocaleString()} rows</Text>
-                      </Flex>
-                      <Text pr={8}>{table.fileSize}</Text>
-                    </Flex>
-                  </VStack>
-                </CardBody>
-              </Card>
-              );
-            })}
-          </Stack>
-        );
-      case 'sql':
-        return (
-          <Stack spacing={2} flex={1}>
-            {!savedQueries || savedQueries.length === 0 ? (
-              <Box p={4} textAlign="center">
-                <Text color="gray.500" fontSize="sm">No saved queries yet</Text>
-              </Box>
-            ) : (
-              savedQueries.map((query) => (
+                return (
                 <Card
-                  key={query.id}
+                  key={table.id}
                   cursor="pointer"
-                  onClick={() => onQuerySelect?.(query)}
-                  _hover={{ bg: "gray.50" }}
+                  onClick={() => onTableSelect?.(table.id)}
+                  bg={isSelected ? "blue.50" : isInJoin ? "blue.50" : "white"}
+                  borderColor={isSelected ? "blue.200" : isInJoin ? "blue.200" : "gray.200"}
+                  borderWidth="1px"
+                  _hover={{
+                    bg: isSelected ? "blue.50" : isInJoin ? "blue.50" : "gray.50",
+                    borderColor: "blue.300"
+                  }}
                   size="sm"
                 >
                   <CardBody p={3} position="relative">
 
+                    {/* Link Button - Top Right */}
+                    {selectedTableId && !isSelected && !isInJoin && (
+                      <Tooltip label="Join with selected file" placement="top">
+                        <IconButton
+                          aria-label="Join files"
+                          icon={<Icon as={FiLink} />}
+                          size="xs"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onJoinStart?.(selectedTableId!, table.id);
+                          }}
+                          position="absolute"
+                          top={2}
+                          right={2}
+                          zIndex={2}
+                        />
+                      </Tooltip>
+                    )}
+
+                    {/* Add to Join Button - Top Right (when joining multiple tables) */}
+                    {showAddToJoinButton && (
+                      <Tooltip label="Add to join" placement="top">
+                        <IconButton
+                          aria-label="Add to join"
+                          icon={<Icon as={FiLink} />}
+                          size="xs"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onJoinAdd?.(table.id);
+                          }}
+                          position="absolute"
+                          top={2}
+                          right={2}
+                          zIndex={2}
+                        />
+                      </Tooltip>
+                    )}
+
                     {/* Delete Button - Bottom Right */}
-                    <Tooltip label="Delete query" placement="top">
+                    <Tooltip label="Delete file" placement="top">
                       <IconButton
-                        aria-label="Delete query"
+                        aria-label="Delete file"
                         icon={<Icon as={FiTrash2} />}
                         size="xs"
                         variant="ghost"
                         colorScheme="red"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteQuery(query.id, query.name);
-                        }}
+                        onClick={() => handleDeleteFile(table.id, table.fileName)}
                         position="absolute"
                         bottom={2}
                         right={2}
@@ -391,29 +313,112 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
                       />
                     </Tooltip>
 
-                    <VStack align="stretch" spacing={1}>
-                      {/* Query Name */}
-                      <Text 
-                        fontWeight="medium" 
-                        color="gray.800" 
-                        fontSize="sm"
-                      >
-                        {query.name}
-                      </Text>
+                    <VStack align="stretch" spacing={2}>
+                      {/* Table Name */}
+                      <Flex align="center" gap={2}>
+                        <Text 
+                          fontWeight="medium" 
+                          color="gray.800" 
+                          fontSize="sm"
+                        >
+                          {table.name}
+                        </Text>
+                        {isInJoin && (
+                          <Icon 
+                            as={FiLink} 
+                            color="blue.500" 
+                            boxSize={4}
+                            opacity={0.7}
+                          />
+                        )}
+                      </Flex>
                       
-                      {/* Creation Date */}
-                      <Text fontSize="xs" color="gray.500">
-                        {new Date(query.created_at).toLocaleDateString()}
-                      </Text>
+                      {/* File Source */}
+                      <Flex align="center" gap={1}>
+                        <Icon as={FiFile} color="gray.500" boxSize={3} />
+                        <Text fontSize="xs" color="gray.500" noOfLines={1}>
+                          {table.fileName}
+                        </Text>
+                      </Flex>
+                      
+                      {/* Stats Row */}
+                      <Flex justify="space-between" fontSize="xs" color="gray.600">
+                        <Flex align="center" gap={1}>
+                          <Icon as={FiDatabase} boxSize={3} />
+                          <Text>{table.rows.toLocaleString()} rows</Text>
+                        </Flex>
+                        <Text pr={8}>{table.fileSize}</Text>
+                      </Flex>
                     </VStack>
                   </CardBody>
                 </Card>
-              ))
-            )}
-          </Stack>
+                );
+              })}
+            </Stack>
+          </Box>
+        );
+      case 'sql':
+        return (
+          <Box p={2}>
+            <Stack spacing={2} flex={1}>
+              {!savedQueries || savedQueries.length === 0 ? (
+                <Box p={4} textAlign="center">
+                  <Text color="gray.500" fontSize="sm">No saved queries yet</Text>
+                </Box>
+              ) : (
+                savedQueries.map((query) => (
+                  <Card
+                    key={query.id}
+                    cursor="pointer"
+                    onClick={() => onQuerySelect?.(query)}
+                    _hover={{ bg: "gray.50" }}
+                    size="sm"
+                  >
+                    <CardBody p={3} position="relative">
+
+                      {/* Delete Button - Bottom Right */}
+                      <Tooltip label="Delete query" placement="top">
+                        <IconButton
+                          aria-label="Delete query"
+                          icon={<Icon as={FiTrash2} />}
+                          size="xs"
+                          variant="ghost"
+                          colorScheme="red"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteQuery(query.id, query.name);
+                          }}
+                          position="absolute"
+                          bottom={2}
+                          right={2}
+                          zIndex={1}
+                        />
+                      </Tooltip>
+
+                      <VStack align="stretch" spacing={1}>
+                        {/* Query Name */}
+                        <Text 
+                          fontWeight="medium" 
+                          color="gray.800" 
+                          fontSize="sm"
+                        >
+                          {query.name}
+                        </Text>
+                        
+                        {/* Creation Date */}
+                        <Text fontSize="xs" color="gray.500">
+                          {new Date(query.created_at).toLocaleDateString()}
+                        </Text>
+                      </VStack>
+                    </CardBody>
+                  </Card>
+                ))
+              )}
+            </Stack>
+          </Box>
         );
       case 'ai':
-        return <ChatInterface />;
+        return <ChatInterface workspaceId={workspaceId} onSqlQuery={onSqlQuery} />;
       default:
         return null;
     }
@@ -428,7 +433,7 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
       bg="gray.50"
       borderRight="1px"
       borderColor="gray.200"
-      p={4}
+      p={0}
       overflow="hidden"
       display="flex"
       flexDirection="column"
@@ -437,46 +442,49 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
       <VStack align="stretch" spacing={2} flex={1} minH={0}>
 
         {/* Tab Buttons */}
-        <Flex gap={1} justify="space-between" flexShrink={0}>
-          <Tooltip label="Tables and files" placement="bottom">
-            <IconButton
-              aria-label="Tables and files"
-              icon={<Icon as={FiFolder} />}
-              size="sm"
-              variant={activeTab === 'tables' ? 'solid' : 'ghost'}
-              colorScheme={activeTab === 'tables' ? 'blue' : 'gray'}
-              onClick={() => setActiveTab('tables')}
-              flex={1}
-            />
-          </Tooltip>
-          
-          <Tooltip label="Saved queries" placement="bottom">
-            <IconButton
-              aria-label="Saved queries"
-              icon={<Icon as={FiCode} />}
-              size="sm"
-              variant={activeTab === 'sql' ? 'solid' : 'ghost'}
-              colorScheme={activeTab === 'sql' ? 'blue' : 'gray'}
-              onClick={() => setActiveTab('sql')}
-              flex={1}
-            />
-          </Tooltip>
-          
-          <Tooltip label="AI" placement="bottom">
-            <IconButton
-              aria-label="AI"
-              icon={<Icon as={FiZap} />}
-              size="sm"
-              variant={activeTab === 'ai' ? 'solid' : 'ghost'}
-              colorScheme={activeTab === 'ai' ? 'blue' : 'gray'}
-              onClick={() => setActiveTab('ai')}
-              flex={1}
-            />
-          </Tooltip>
-        </Flex>
+
+        <Box p={2} pb={0}>
+          <Flex gap={1} justify="space-between" flexShrink={0}>
+            <Tooltip label="Tables and files" placement="bottom">
+              <IconButton
+                aria-label="Tables and files"
+                icon={<Icon as={FiFolder} />}
+                size="sm"
+                variant={activeTab === 'tables' ? 'solid' : 'ghost'}
+                colorScheme={activeTab === 'tables' ? 'blue' : 'gray'}
+                onClick={() => setActiveTab('tables')}
+                flex={1}
+              />
+            </Tooltip>
+            
+            <Tooltip label="AI" placement="bottom">
+              <IconButton
+                aria-label="AI"
+                icon={<Icon as={FiZap} />}
+                size="sm"
+                variant={activeTab === 'ai' ? 'solid' : 'ghost'}
+                colorScheme={activeTab === 'ai' ? 'blue' : 'gray'}
+                onClick={() => setActiveTab('ai')}
+                flex={1}
+              />
+            </Tooltip>
+            
+            <Tooltip label="Saved queries" placement="bottom">
+              <IconButton
+                aria-label="Saved queries"
+                icon={<Icon as={FiCode} />}
+                size="sm"
+                variant={activeTab === 'sql' ? 'solid' : 'ghost'}
+                colorScheme={activeTab === 'sql' ? 'blue' : 'gray'}
+                onClick={() => setActiveTab('sql')}
+                flex={1}
+              />
+            </Tooltip>
+          </Flex>
+        </Box>
 
         {/* Separator */}
-        <Divider flexShrink={0} />
+        <Divider flexShrink={0} m={0} />
         
         {/* Tab Content */}
         <Box 

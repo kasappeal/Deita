@@ -11,18 +11,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useJoinTables } from '@/hooks/useJoinTables';
 import apiClient, { FileData, QueryData, workspaceApi } from '@/services/api';
 import {
-  Box,
-  Flex,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalHeader,
-  ModalOverlay,
-  Spinner,
-  useDisclosure,
-  useToast,
-  VStack
+    Box,
+    Flex,
+    Modal,
+    ModalBody,
+    ModalCloseButton,
+    ModalContent,
+    ModalHeader,
+    ModalOverlay,
+    Spinner,
+    useDisclosure,
+    useToast,
+    VStack
 } from '@chakra-ui/react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -195,6 +195,11 @@ const WorkspacePage: React.FC = () => {
     setRunQuerySignal(s => s + 1);
   };
 
+  const handleSqlQueryFromChat = (sqlQuery: string) => {
+    setQuery(sqlQuery);
+    setRunQuerySignal(s => s + 1);
+  };
+
   const handleJoinStart = (leftTableId: string, rightTableId: string) => {
     startJoinWithTwoTables(leftTableId, rightTableId);
   };
@@ -315,6 +320,7 @@ const WorkspacePage: React.FC = () => {
               onClearJoins={handleClearJoins}
               onQuerySelect={handleQuerySelect}
               refreshQueries={refreshQueriesSignal}
+              onSqlQuery={handleSqlQueryFromChat}
             />
           </Box>
         ) : null}
