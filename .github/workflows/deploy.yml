@@ -98,12 +98,12 @@ jobs:
       - name: Copy files to server
         run: |
           # Copy docker-compose.yml and .env file to server
-          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          scp -v -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             docker-compose.yml .env.production \
             ${{ secrets.PRODUCTION_SERVER_USER }}@${{ secrets.PRODUCTION_SERVER_HOST }}:${{ secrets.PRODUCTION_APP_DIRECTORY }}/
           
           # Rename .env.production to .env on server
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ssh -v -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             ${{ secrets.PRODUCTION_SERVER_USER }}@${{ secrets.PRODUCTION_SERVER_HOST }} \
             "cd ${{ secrets.PRODUCTION_APP_DIRECTORY }} && mv .env.production .env"
       
