@@ -5,9 +5,13 @@ name: Deploy to Production
 
 on:
   workflow_run:
-    workflows: ["Build Backend Docker Image", "Build and Publish Frontend Docker Image"]
+    workflows: ["Build Backend Docker Image",]
     types: [completed]
     branches: [main]
+    
+concurrency:
+  group: deploy-production-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   ANSIBLE_HOST_KEY_CHECKING: false
