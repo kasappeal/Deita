@@ -3,29 +3,23 @@ import {
   Button,
   Flex,
   Icon,
-  IconButton,
   Spinner,
   Text,
-  Textarea,
-  Tooltip,
   VStack,
   useToast
 } from '@chakra-ui/react';
 import React, { useEffect, useRef, useState } from 'react';
-import { FiCode, FiLock, FiSend, FiTrash2, FiUser, FiZap } from 'react-icons/fi';
+import { FiLock, FiZap } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
 import { ChatMessage, workspaceApi } from '../../services/api';
 import SignInModal from '../auth/SignInModal';
+import ChatInput from './ChatInput';
+import MessageBubble, { UIMessage } from './MessageBubble';
 
 interface ChatInterfaceProps {
   workspaceId?: string;
   onQuery?: (query: string) => Promise<unknown>;
   onSqlQuery?: (sqlQuery: string) => void;
-}
-
-// Local message interface for UI (extends ChatMessage with timestamp as Date)
-interface UIMessage extends Omit<ChatMessage, 'created_at'> {
-  timestamp: Date;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onSqlQuery }) => {
@@ -35,7 +29,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
   const isLoadingHistoryRef = useRef(false);
   const toast = useToast();
   const { isAuthenticated } = useAuth();
@@ -110,10 +103,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
 
   // Focus input when component is shown (workspaceId becomes available and user is authenticated)
   useEffect(() => {
-    if (workspaceId && isAuthenticated && inputRef.current) {
+    if (workspaceId && isAuthenticated) {
       // Small delay to ensure component is fully rendered
       setTimeout(() => {
-        inputRef.current?.focus();
+        // Focus is handled by the ChatInput component
       }, 100);
     }
   }, [workspaceId, isAuthenticated]);
@@ -123,11 +116,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
 
     const messageContent = inputValue.trim();
     setInputValue('');
-    
-    // Reset textarea height
-    if (inputRef.current) {
-      inputRef.current.style.height = '40px';
-    }
     
     // Create and add user message immediately
     const userMessage: UIMessage = {
@@ -180,33 +168,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
       }
     } finally {
       setIsLoading(false);
-      // Focus back on input
-      setTimeout(() => inputRef.current?.focus(), 100);
     }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Send message with Ctrl+Enter or Cmd+Enter
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-    // Allow regular Enter for line breaks in textarea
-    // Shift+Enter also creates line breaks (default behavior)
-  };
-
-  // Auto-resize textarea based on content
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputValue(e.target.value);
-    
-    // Auto-resize textarea
-    const textarea = e.target;
-    textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
-  };
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   const handleClearChat = async () => {
@@ -309,91 +271,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
             </Box>
           )}
 
-          {messages.map((message: UIMessage) => {
-            const renderSqlCard = () => {
-              if (!message.is_sql_query || !message.message_metadata?.sql_query) return null;
-              
-              return (
-                <Flex justify="flex-start" px={1} mt={2}>
-                  <Box
-                    maxWidth="85%"
-                    bg="blue.50"
-                    border="1px"
-                    borderColor="blue.200"
-                    borderRadius="md"
-                    overflow="hidden"
-                    cursor="pointer"
-                    _hover={{ bg: "blue.100", shadow: "md" }}
-                    onClick={() => {
-                      const sqlQuery = message.message_metadata?.sql_query as string;
-                      if (onSqlQuery && sqlQuery) {
-                        onSqlQuery(sqlQuery);
-                      }
-                    }}
-                  >
-                    <Box bg="blue.500" px={3} py={1}>
-                      <Flex align="center" gap={2}>
-                        <Icon as={FiCode} boxSize={3} color="white" />
-                        <Text fontSize="xs" color="white" fontWeight="medium">
-                          Click to see data
-                        </Text>
-                      </Flex>
-                    </Box>
-                    <Box px={3} py={2}>
-                      <Text
-                        fontSize="xs"
-                        fontFamily="mono"
-                        color="gray.700"
-                        whiteSpace="pre-wrap"
-                        maxH="50px"
-                        overflowY="auto"
-                      >
-                        {message.message_metadata.sql_query as string}
-                      </Text>
-                    </Box>
-                  </Box>
-                </Flex>
-              );
-            };
-
-            return (
-              <Box key={message.id} mb={3}>
-                {/* Regular message */}
-                <Flex justify={message.role === 'user' ? 'flex-end' : 'flex-start'} px={1}>
-                  <Box
-                    maxWidth="85%"
-                    bg={message.role === 'user' ? 'blue.500' : 'white'}
-                    color={message.role === 'user' ? 'white' : 'gray.800'}
-                    px={3}
-                    py={2}
-                    borderRadius="md"
-                    boxShadow="sm"
-                    border={message.role === 'assistant' ? '1px' : 'none'}
-                    borderColor="gray.200"
-                  >
-                    <Flex align="center" gap={2} mb={1}>
-                      <Icon
-                        as={message.role === 'user' ? FiUser : FiZap}
-                        boxSize={3}
-                      />
-                      <Text fontSize="xs" opacity={0.8}>
-                        {message.role === 'user' ? 'You' : 'AI'}
-                      </Text>
-                      <Text fontSize="xs" opacity={0.6}>
-                        {formatTime(message.timestamp)}
-                      </Text>
-                    </Flex>
-                    <Text fontSize="sm" whiteSpace="pre-wrap">
-                      {message.content}
-                    </Text>
-                  </Box>
-                </Flex>
-
-                {/* SQL Query Card */}
-                {renderSqlCard()}
-              </Box>
-            );
-          })}
+          {messages.map((message: UIMessage) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              onSqlClick={onSqlQuery}
+            />
+          ))}
 
           {isLoading && (
             <Flex justify="flex-start" px={1}>
@@ -423,70 +307,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
       </Box>
 
       {/* Input Area */}
-      <Box
-        width="100%"
-        p={3}
-        pb={1}
-        borderTop="1px"
-        borderColor="gray.200"
-        bg="white"
-        flexShrink={0}
-      >
-        <VStack spacing={0} align="stretch">
-          <Textarea
-            ref={inputRef}
-            placeholder={!isAuthenticated ? "Sign in to use chat" : workspaceId ? "Ask about your data" : "Select a workspace to chat"}
-            value={inputValue}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            size="sm"
-            disabled={isLoading || !workspaceId || !isAuthenticated}
-            flex={1}
-            minH="70px"
-            maxH="120px"
-            py={2}
-            pb={0}
-            px={2}
-            resize="none"
-            rows={inputValue.split('\n').length}
-          />
-            <Flex width="100%" justify="space-between" align="flex-end">
-            <Tooltip 
-              label="Clear chat" 
-              placement="top"
-              hasArrow
-            >
-              <IconButton
-              aria-label="Clear chat"
-              icon={<Icon as={FiTrash2} />}
-              onClick={handleClearChat}
-              isDisabled={messages.length === 0 || isLoading || !workspaceId || !isAuthenticated}
-              colorScheme="gray"
-              variant="ghost"
-              size="sm"
-              mt={1}
-              />
-            </Tooltip>
-            <Tooltip 
-              label="Send message (Ctrl+Enter)" 
-              placement="top"
-              hasArrow
-            >
-              <IconButton
-              aria-label="Send message (Ctrl+Enter)"
-              icon={<Icon as={FiSend} />}
-              onClick={handleSendMessage}
-              isDisabled={!inputValue.trim() || isLoading || !workspaceId || !isAuthenticated}
-              isLoading={isLoading}
-              colorScheme="blue"
-              variant="ghost"
-              size="sm"
-              mt={1}
-              />
-            </Tooltip>
-            </Flex>
-        </VStack>
-      </Box>
+      <ChatInput
+        value={inputValue}
+        isLoading={isLoading}
+        isAuthenticated={isAuthenticated}
+        workspaceId={workspaceId}
+        onValueChange={setInputValue}
+        onSend={handleSendMessage}
+        onClear={handleClearChat}
+      />
     </VStack>
   );
 };
