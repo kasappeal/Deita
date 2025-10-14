@@ -19,10 +19,10 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     pip install uv && \
     groupadd -r deita && \
-    useradd -r -g deita deita  && \
+    useradd -r -g deita -d /home/deita deita  && \
+    mkdir -p /home/deita/.cache/uv /home/deita/.duckdb /app/data /app/data/tmp && \
     uv sync --no-dev   && \
-    mkdir -p /home/deita/.cache/uv && \
-    chown -R deita:deita /app /home/deita/.cache/uv
+    chown -R deita:deita /app /home/deita
 
 # Switch to non-root user
 USER deita

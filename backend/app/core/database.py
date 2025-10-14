@@ -51,4 +51,9 @@ def get_db() -> Generator[Session, None, None]:
 
 def get_duckdb_connection():
     """Get DuckDB connection for analytics."""
-    return duckdb.connect(settings.duckdb_path)
+    # Configure DuckDB to use a specific directory for temporary files
+    # This prevents permission issues in production
+    conn = duckdb.connect(settings.duckdb_path)
+    # Set temp directory to a writable location
+    conn.execute("SET temp_directory='/tmp'")
+    return conn
