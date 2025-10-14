@@ -89,6 +89,21 @@
         group: "{{ ansible_user }}"
         mode: '0755'
     
+    - name: Copy docker-compose.yml
+      copy:
+        src: ../docker-compose.yml
+        dest: "{{ app_directory }}/docker-compose.yml"
+    
+    - name: Copy environment file
+      copy:
+        src: ../.env
+        dest: "{{ app_directory }}/.env"
+    
+    - name: Login to GitHub Container Registry
+      shell: docker login ghcr.io -u "{{ github_actor }}" -p "{{ github_token }}"
+      args:
+        chdir: "{{ app_directory }}"
+    
     - name: Pull latest Docker images
       shell: docker compose pull
       args:
