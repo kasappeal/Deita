@@ -89,7 +89,7 @@ jobs:
       - name: Test Ansible connection
         run: |
           cd ansible
-          ansible production -m ping
+          ansible production -m ping -e "production_server_host=${{ secrets.PRODUCTION_SERVER_HOST }}" -e "production_server_user=${{ secrets.PRODUCTION_SERVER_USER }}"
       
       - name: Run Ansible deployment playbook
         run: |
