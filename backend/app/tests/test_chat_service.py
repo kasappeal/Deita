@@ -1,7 +1,6 @@
 """
 Tests for chat service functionality.
 """
-import json
 import uuid
 from datetime import UTC, datetime
 from unittest.mock import MagicMock
@@ -142,7 +141,7 @@ class TestChatService:
             user_id=self.user_id,
             role="assistant",
             content="Here are the top 10 customers",
-            message_metadata=json.dumps(sql_metadata),
+            message_metadata=sql_metadata,  # Pass dict, not JSON string
             is_sql_query=True,
             created_at=datetime.now(UTC)
         )
@@ -166,7 +165,7 @@ class TestChatService:
         assert result[0] == "SELECT * FROM customers ORDER BY total DESC LIMIT 10"
 
     def test_get_sql_query_history_invalid_json(self):
-        """Test SQL query history with invalid JSON metadata."""
+        """Test SQL query history with metadata without sql_query key."""
         # Setup
         sql_message = ChatMessage(
             id=uuid.uuid4(),
@@ -174,7 +173,7 @@ class TestChatService:
             user_id=self.user_id,
             role="assistant",
             content="Response",
-            message_metadata="invalid json",
+            message_metadata={"other_key": "value"},  # Dict without sql_query key
             is_sql_query=True,
             created_at=datetime.now(UTC)
         )
@@ -193,7 +192,7 @@ class TestChatService:
         # Execute
         result = self.chat_service.get_sql_query_history(self.workspace_id, limit=3)
 
-        # Verify - should return empty list due to invalid JSON
+        # Verify - should return empty list since metadata doesn't have sql_query key
         assert len(result) == 0
 
     def test_build_memory_context_with_user(self):

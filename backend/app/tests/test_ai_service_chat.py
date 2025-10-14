@@ -217,6 +217,12 @@ class TestAIServiceChatMemory:
         mock_completion.return_value = mock_response
 
         # Setup mock chat service
+        mock_memory = ChatMemoryContext(
+            recent_messages=[],
+            sql_query_history=[],
+            user_context=None
+        )
+        self.ai_service.chat_service.build_memory_context = MagicMock(return_value=mock_memory)
         self.ai_service.chat_service.create_message = MagicMock()
 
         # Setup files
@@ -283,8 +289,8 @@ class TestAIServiceChatMemory:
             sql_query_history=["SELECT * FROM customers"],
             user_context="User: Test User"
         )
-        # Mock the get_chat_memory method directly
-        self.ai_service.get_chat_memory = MagicMock(return_value=mock_memory)
+        # Mock the build_memory_context method on chat_service
+        self.ai_service.chat_service.build_memory_context = MagicMock(return_value=mock_memory)
 
         files = [File(
             id=uuid.uuid4(),

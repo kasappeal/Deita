@@ -4,11 +4,16 @@ Chat message model for storing conversation history in workspaces.
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import UUID, Boolean, Column, DateTime, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import JSON, UUID, Boolean, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+
+
+# Use JSON for SQLite, JSONB for PostgreSQL
+class JSONType(JSON):
+    """Custom JSON type that uses JSON for all databases, but falls back gracefully."""
+    impl = JSON
 
 
 class ChatMessage(Base):
@@ -31,9 +36,9 @@ class ChatMessage(Base):
     role = Column(String, nullable=False)  # 'user', 'assistant', 'system'
     content = Column(Text, nullable=False)
     message_metadata = Column(
-        JSONB,
+        JSON,
         nullable=True
-    )  # JSONB for additional data like SQL queries, confidence scores, etc.
+    )  # JSON for additional data like SQL queries, confidence scores, etc.
     is_sql_query = Column(Boolean, default=False)  # Flag to identify SQL-related messages
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 

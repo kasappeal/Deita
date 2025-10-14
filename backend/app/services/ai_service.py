@@ -4,20 +4,29 @@ from os import environ
 from uuid import UUID
 
 from litellm import completion
+from sqlalchemy.orm import Session
 
-from app.schemas.chat_message import ChatMessageCreate, ChatMessageResponse
+from app.schemas.chat_message import ChatMemoryContext, ChatMessageCreate
 from app.schemas.file import File
 from app.services.chat_service import ChatService
 
 
 class AIService:
 
-    def __init__(self, api_key: str, model: str, chat_service: ChatService):
+    def __init__(self, api_key: str, model: str, chat_service: ChatService | None = None, db: Session | None = None):
         self.api_key = api_key
         if not model.startswith('openrouter/'):
             model = f'openrouter/{model}'
         self.model = model
-        self.chat_service = chat_service
+        self.db = db
+
+        # If chat_service is provided, use it. Otherwise, create one from db if available
+        if chat_service is not None:
+            self.chat_service = chat_service
+        elif db is not None:
+            self.chat_service = ChatService(db)
+        else:
+            self.chat_service = None
 
     def _setup_environment(self):
         environ["OPENROUTER_API_KEY"] = self.api_key
@@ -70,20 +79,50 @@ class AIService:
         )
         self.chat_service.create_message(message_create)
 
-    def build_memory_context_string(self, recent_messages: list[ChatMessageResponse], sql_query_history: list[str]) -> str:
+    def get_chat_memory(
+        self,
+        workspace_id: UUID,
+        user_id: int | None = None
+    ) -> ChatMemoryContext | None:
+        """Get chat memory context for a workspace."""
+        if not self.chat_service:
+            return None
+
+        return self.chat_service.build_memory_context(workspace_id, user_id)
+
+    def build_memory_context_string(
+        self,
+        memory_context: ChatMemoryContext | None
+    ) -> str:
         """Build a string representation of chat memory for AI prompts."""
+        if not memory_context:
+            return ""
+
+        # Check if context is empty
+        if (not memory_context.recent_messages and
+            not memory_context.sql_query_history and
+            not memory_context.user_context):
+            return ""
+
         context_parts = []
 
+        # Add user context if available
+        if memory_context.user_context:
+            context_parts.append("<user_context>")
+            context_parts.append(memory_context.user_context)
+            context_parts.append("</user_context>")
+
         # Add recent conversation history
-        context_parts.append("<conversation_history>")
-        for msg in recent_messages:
-            context_parts.append(f"{msg.role}: {msg.content}")
-        context_parts.append("</conversation_history>")
+        if memory_context.recent_messages:
+            context_parts.append("<conversation_history>")
+            for msg in memory_context.recent_messages:
+                context_parts.append(f"{msg.role}: {msg.content}")
+            context_parts.append("</conversation_history>")
 
         # Add SQL query history
-        if sql_query_history:
+        if memory_context.sql_query_history:
             context_parts.append("<previous_sql_queries>")
-            for query in sql_query_history:
+            for query in memory_context.sql_query_history:
                 context_parts.append(f"- {query}")
             context_parts.append("</previous_sql_queries>")
 
@@ -101,10 +140,9 @@ class AIService:
 
         # Get chat memory context if workspace_id is provided
         memory_context_str = ""
-        if workspace_id:
-            recent_messages = self.chat_service.get_recent_messages(workspace_id, limit=10)
-            sql_query_history = self.chat_service.get_sql_query_history(workspace_id, limit=5)
-            memory_context_str = self.build_memory_context_string(recent_messages, sql_query_history)
+        if workspace_id and self.chat_service:
+            memory_context = self.chat_service.build_memory_context(workspace_id, user_id)
+            memory_context_str = self.build_memory_context_string(memory_context)
 
         prompt = f"""
             You must strictly follow the instructions below. Deviations will result in a penalty to your confidence score.

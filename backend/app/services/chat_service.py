@@ -6,8 +6,12 @@ from uuid import UUID
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
-from app.models import ChatMessage
-from app.schemas.chat_message import ChatMessageCreate, ChatMessageResponse
+from app.models import ChatMessage, User
+from app.schemas.chat_message import (
+    ChatMemoryContext,
+    ChatMessageCreate,
+    ChatMessageResponse,
+)
 
 
 class ChatService:
@@ -108,3 +112,32 @@ class ChatService:
             .filter(ChatMessage.workspace_id == workspace_id)
             .scalar()
         ) or 0
+
+    def build_memory_context(
+        self,
+        workspace_id: UUID,
+        user_id: int | None = None,
+        message_limit: int = 10,
+        sql_history_limit: int = 5
+    ) -> ChatMemoryContext:
+        """Build memory context for AI interactions."""
+        # Get recent messages
+        recent_messages = self.get_recent_messages(workspace_id, limit=message_limit)
+
+        # Get SQL query history
+        sql_query_history = self.get_sql_query_history(workspace_id, limit=sql_history_limit)
+
+        # Get user context if user_id is provided
+        user_context = None
+        if user_id:
+            user = self.db.query(User).filter(User.id == user_id).first()
+            if user is not None:
+                full_name = getattr(user, 'full_name', None)
+                if full_name:
+                    user_context = f"User: {full_name}"
+
+        return ChatMemoryContext(
+            recent_messages=recent_messages,
+            user_context=user_context,
+            sql_query_history=sql_query_history
+        )
