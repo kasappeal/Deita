@@ -20,7 +20,8 @@ RUN apt-get update && \
     groupadd -r deita && \
     useradd -r -g deita deita  && \
     uv sync --no-dev   && \
-    chown -R deita:deita /app
+    mkdir -p /home/deita/.cache/uv && \
+    chown -R deita:deita /app /home/deita/.cache/uv
 
 # Switch to non-root user
 USER deita
