@@ -1,6 +1,7 @@
 # API Design
 
 ## Overview
+
 The API for Deita is designed to be RESTful, secure, and easy to consume by the React frontend. It supports all core features: file upload, data exploration, SQL/AI queries, workspace management, authentication, and export.
 
 ## Main Endpoints
@@ -147,7 +148,7 @@ Content-Type: application/json
 {
 	"email": "user@example.com"
 }
-``` 
+```
 
 ##### Success Response Example
 
@@ -157,7 +158,7 @@ Content-Type: application/json
 {
 	"message": "Magic link sent to your email."
 }
-``` 
+```
 
 ##### Error Response Example
 
@@ -167,7 +168,7 @@ Content-Type: application/json
 {
 	"error": "Invalid email address."
 }
-``` 
+```
 
 #### Verify magic link token
 
@@ -407,6 +408,7 @@ Content-Type: application/json
 	"error": "Invalid visibility value."
 }
 ```
+
 #### Delete workspace
 
 `DELETE /workspaces/:workspace_id`
@@ -475,6 +477,7 @@ Authorization: Bearer <token>
 	"error": "Workspace not found."
 }
 ```
+
 #### Get workspace details
 
 `GET /workspaces/:workspace_id`
@@ -952,6 +955,7 @@ X-Total: 2
 	"error": "File not found."
 }
 ```
+
 #### Rename file
 
 `PATCH /workspaces/:workspace_id/files/:id`
@@ -1083,6 +1087,7 @@ Content-Type: application/json
 	"error": "Invalid file name."
 }
 ```
+
 #### Delete file
 
 `DELETE /workspaces/:workspace_id/files/:id`
@@ -1157,6 +1162,7 @@ Authorization: Bearer <token>
 	"error": "File not found."
 }
 ```
+
 #### Upload file (Excel/CSV)
 
 `POST /workspaces/:workspace_id/files`
@@ -1280,6 +1286,7 @@ file=@sales.csv
 	"error": "Invalid file type."
 }
 ```
+
 - `POST /files` — Upload file (Excel/CSV)
 - `DELETE /files/:id` — Delete file
 - `PATCH /files/:id` — Rename file
@@ -1423,7 +1430,6 @@ X-Total: 2
 	"error" "Workspace not found"
 }
 ```
-
 
 #### Get table metadata
 
@@ -2013,7 +2019,6 @@ X-Total: 1
 }
 ```
 
-
 #### Save query
 
 `POST /workspaces/:workspace_id/queries`
@@ -2305,7 +2310,6 @@ X-Total: 100
 
 ### AI Assistance
 
-
 #### Query data from natural language prompt
 
 `POST /workspaces/:workspace_id/ai/query`
@@ -2439,11 +2443,9 @@ X-Total: 100
 }
 ```
 
-
 #### Suggest relationships/insights between tables
 
 `POST /workspaces/:workspace_id/ai/suggest-relationships`
-
 
 ##### OpenAPI Specification
 
@@ -2604,6 +2606,7 @@ Content-Type: application/json
 	"error": "Unauthorized."
 }
 ```
+
 ```http
 401 Unauthorized
 
@@ -2886,7 +2889,6 @@ Content-Type: application/json
 }
 ```
 
-
 #### Download exported file
 
 `GET /workspaces/:workspace_id/exports/:export_id`
@@ -2979,7 +2981,365 @@ Content-Type: application/octet-stream
 }
 ```
 
+### Chat System
+
+#### Get chat messages for workspace
+
+`GET /workspaces/:workspace_id/chat/messages`
+
+##### OpenAPI Specification
+
+```yaml
+get:
+	summary: Get chat messages for a workspace
+	tags:
+		- Chat
+	security:
+		- bearerAuth: []
+	parameters:
+		- name: workspace_id
+			in: path
+			required: true
+			schema:
+				type: string
+				format: uuid
+			example: "456"
+		- name: limit
+			in: query
+			required: false
+			schema:
+				type: integer
+				default: 50
+			example: 50
+		- name: offset
+			in: query
+			required: false
+			schema:
+				type: integer
+				default: 0
+			example: 0
+	responses:
+		'200':
+			description: List of chat messages
+			content:
+				application/json:
+					schema:
+						type: array
+						items:
+							type: object
+							properties:
+								id:
+									type: string
+									format: uuid
+									example: "msg_789"
+								workspace_id:
+									type: string
+									format: uuid
+									example: "456"
+								user_id:
+									type: integer
+									nullable: true
+									example: 123
+								role:
+									type: string
+									enum: [user, assistant]
+									example: "user"
+								content:
+									type: string
+									example: "Show me the top 10 customers"
+								message_metadata:
+									type: object
+									nullable: true
+									example: {"sql_query": "SELECT...", "confidence": 0.95}
+								is_sql_query:
+									type: boolean
+									example: false
+								created_at:
+									type: string
+									format: date-time
+									example: "2025-10-14T12:00:00Z"
+		'403':
+			description: Forbidden (not authorized to access workspace)
+			content:
+				application/json:
+					schema:
+						type: object
+						properties:
+							error:
+								type: string
+								example: Not authorized to access this workspace.
+		'404':
+			description: Workspace not found
+			content:
+				application/json:
+					schema:
+						type: object
+						properties:
+							error:
+								type: string
+								example: Workspace not found.
+		'401':
+			description: Unauthorized
+			content:
+				application/json:
+					schema:
+						type: object
+						properties:
+							error:
+								type: string
+								example: Unauthorized.
+```
+
+##### Request Example
+
+```http
+GET /workspaces/456/chat/messages?limit=50&offset=0
+
+Authorization: Bearer <token>
+```
+
+##### Success Response Example
+
+```http
+200 OK
+
+[
+	{
+		"id": "msg_789",
+		"workspace_id": "456",
+		"user_id": 123,
+		"role": "user",
+		"content": "Show me the top 10 customers",
+		"message_metadata": null,
+		"is_sql_query": false,
+		"created_at": "2025-10-14T12:00:00Z"
+	},
+	{
+		"id": "msg_790",
+		"workspace_id": "456",
+		"user_id": null,
+		"role": "assistant",
+		"content": "Here's the SQL query to get the top 10 customers...",
+		"message_metadata": {
+			"sql_query": "SELECT * FROM customers ORDER BY total DESC LIMIT 10",
+			"confidence": 0.95
+		},
+		"is_sql_query": true,
+		"created_at": "2025-10-14T12:00:05Z"
+	}
+]
+```
+
+##### Error Response Example
+
+```http
+403 Forbidden
+
+{
+	"error": "Not authorized to access this workspace."
+}
+```
+
+#### Clear chat messages
+
+`DELETE /workspaces/:workspace_id/chat/messages`
+
+##### OpenAPI Specification
+
+```yaml
+delete:
+	summary: Clear all chat messages for a workspace
+	tags:
+		- Chat
+	security:
+		- bearerAuth: []
+	parameters:
+		- name: workspace_id
+			in: path
+			required: true
+			schema:
+				type: string
+				format: uuid
+			example: "456"
+	responses:
+		'200':
+			description: Chat messages cleared successfully
+			content:
+				application/json:
+					schema:
+						type: object
+						properties:
+							message:
+								type: string
+								example: "Deleted 15 chat messages"
+		'403':
+			description: Forbidden (not authorized to clear messages)
+			content:
+				application/json:
+					schema:
+						type: object
+						properties:
+							error:
+								type: string
+								example: Not authorized to clear chat messages.
+		'404':
+			description: Workspace not found
+			content:
+				application/json:
+					schema:
+						type: object
+						properties:
+							error:
+								type: string
+								example: Workspace not found.
+		'401':
+			description: Unauthorized
+			content:
+				application/json:
+					schema:
+						type: object
+						properties:
+							error:
+								type: string
+								example: Unauthorized.
+```
+
+##### Request Example
+
+```http
+DELETE /workspaces/456/chat/messages
+
+Authorization: Bearer <token>
+```
+
+##### Success Response Example
+
+```http
+200 OK
+
+{
+	"message": "Deleted 15 chat messages"
+}
+```
+
+##### Error Response Example
+
+```http
+403 Forbidden
+
+{
+	"error": "Not authorized to clear chat messages."
+}
+```
+
+### Query Export (CSV Streaming)
+
+#### Export query results as CSV
+
+`POST /workspaces/:workspace_id/query/csv`
+
+##### OpenAPI Specification
+
+```yaml
+post:
+	summary: Execute SQL query and stream results as CSV
+	tags:
+		- Query Execution
+	security:
+		- bearerAuth: [] (optional for public workspaces)
+	parameters:
+		- name: workspace_id
+			in: path
+			required: true
+			schema:
+				type: string
+				format: uuid
+			example: "456"
+	requestBody:
+		required: true
+		content:
+			application/json:
+				schema:
+					type: object
+					properties:
+						query:
+							type: string
+							example: "SELECT * FROM customers WHERE country = 'US'"
+					required:
+						- query
+	responses:
+		'200':
+			description: CSV file stream
+			content:
+				text/csv:
+					schema:
+						type: string
+						format: binary
+			headers:
+				Content-Disposition:
+					schema:
+						type: string
+					description: 'attachment; filename="query_export_{workspace_id}_{timestamp}.csv"'
+		'400':
+			description: Invalid query or not a SELECT statement
+			content:
+				application/json:
+					schema:
+						type: object
+						properties:
+							error:
+								type: string
+								example: Only SELECT queries are allowed.
+		'404':
+			description: Workspace not found
+			content:
+				application/json:
+					schema:
+						type: object
+						properties:
+							error:
+								type: string
+								example: Workspace not found.
+```
+
+##### Request Example
+
+```http
+POST /workspaces/456/query/csv
+
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+	"query": "SELECT * FROM customers WHERE country = 'US'"
+}
+```
+
+##### Success Response Example
+
+```http
+200 OK
+
+Content-Type: text/csv
+Content-Disposition: attachment; filename="query_export_456_1728912345.csv"
+
+customer_id,name,country
+1,Alice,US
+2,Bob,US
+```
+
+##### Error Response Example
+
+```http
+400 Bad Request
+
+{
+	"error": "Only SELECT queries are allowed."
+}
+```
+
 ## API Design Principles
+
 - **RESTful, resource-oriented URLs**
 - **JWT-based authentication** (magic link)
 - **Input validation and error handling**
@@ -2988,4 +3348,5 @@ Content-Type: application/octet-stream
 - **OpenAPI/Swagger documentation**
 
 ## Extensibility
+
 - API supports future features: query sharing, export history, advanced AI endpoints.
