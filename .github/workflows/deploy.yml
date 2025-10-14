@@ -63,8 +63,9 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           chmod 700 ~/.ssh
           
-          # Add known hosts with proper error handling
-          ssh-keyscan -H ${{ secrets.PRODUCTION_SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || echo "Warning: Could not add host key"
+          # Add known hosts with proper error handling (use custom port if set)
+          SSH_PORT="${{ secrets.PRODUCTION_SERVER_PORT || '22' }}"
+          ssh-keyscan -p $SSH_PORT -H ${{ secrets.PRODUCTION_SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || echo "Warning: Could not add host key"
       
       - name: Create production environment file
         run: |
@@ -93,9 +94,9 @@ jobs:
       - name: Test Ansible connection
         run: |
           cd ansible
-          ansible production -m ping -e "production_server_host=${{ secrets.PRODUCTION_SERVER_HOST }}" -e "production_server_user=${{ secrets.PRODUCTION_SERVER_USER }}"
+          ansible production -m ping -e "production_server_host=${{ secrets.PRODUCTION_SERVER_HOST }}" -e "production_server_user=${{ secrets.PRODUCTION_SERVER_USER }}" -e "production_server_port=${{ secrets.PRODUCTION_SERVER_PORT || '22' }}"
       
       - name: Run Ansible deployment playbook
         run: |
           cd ansible
-          ansible-playbook -i inventory.yml deploy.yml -e "production_server_host=${{ secrets.PRODUCTION_SERVER_HOST }}" -e "production_server_user=${{ secrets.PRODUCTION_SERVER_USER }}" -e "app_directory=${{ secrets.PRODUCTION_APP_DIRECTORY }}" -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" -e "s3_endpoint=${{ secrets.S3_ENDPOINT }}" -e "s3_access_key=${{ secrets.S3_ACCESS_KEY }}" -e "s3_secret_key=${{ secrets.S3_SECRET_KEY }}" -e "s3_bucket_name=${{ secrets.S3_BUCKET_NAME }}" -e "smtp_host=${{ secrets.SMTP_HOST }}" -e "smtp_port=${{ secrets.SMTP_PORT }}" -e "smtp_user=${{ secrets.SMTP_USER }}" -e "smtp_password=${{ secrets.SMTP_PASSWORD }}" -e "from_email=${{ secrets.FROM_EMAIL }}" -e "secret_key=${{ secrets.SECRET_KEY }}" -e "ai_model_name=${{ secrets.AI_MODEL_NAME }}" -e "ai_model_endpoint=${{ secrets.AI_MODEL_ENDPOINT }}" -e "ai_model_api_key=${{ secrets.AI_MODEL_API_KEY }}" -e "github_token=${{ secrets.GITHUB_TOKEN }}" -e "github_actor=${{ github.actor }}" -v
+          ansible-playbook -i inventory.yml deploy.yml -e "production_server_host=${{ secrets.PRODUCTION_SERVER_HOST }}" -e "production_server_user=${{ secrets.PRODUCTION_SERVER_USER }}" -e "production_server_port=${{ secrets.PRODUCTION_SERVER_PORT || '22' }}" -e "app_directory=${{ secrets.PRODUCTION_APP_DIRECTORY }}" -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" -e "s3_endpoint=${{ secrets.S3_ENDPOINT }}" -e "s3_access_key=${{ secrets.S3_ACCESS_KEY }}" -e "s3_secret_key=${{ secrets.S3_SECRET_KEY }}" -e "s3_bucket_name=${{ secrets.S3_BUCKET_NAME }}" -e "smtp_host=${{ secrets.SMTP_HOST }}" -e "smtp_port=${{ secrets.SMTP_PORT }}" -e "smtp_user=${{ secrets.SMTP_USER }}" -e "smtp_password=${{ secrets.SMTP_PASSWORD }}" -e "from_email=${{ secrets.FROM_EMAIL }}" -e "secret_key=${{ secrets.SECRET_KEY }}" -e "ai_model_name=${{ secrets.AI_MODEL_NAME }}" -e "ai_model_endpoint=${{ secrets.AI_MODEL_ENDPOINT }}" -e "ai_model_api_key=${{ secrets.AI_MODEL_API_KEY }}" -e "github_token=${{ secrets.GITHUB_TOKEN }}" -e "github_actor=${{ github.actor }}" -v

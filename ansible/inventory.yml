@@ -3,6 +3,7 @@ production:
     production_server:
       ansible_host: "{{ production_server_host }}"
       ansible_user: "{{ production_server_user }}"
+      ansible_port: "{{ production_server_port | default(22) }}"
       ansible_ssh_private_key_file: ~/.ssh/deploy_key
   vars:
     ansible_python_interpreter: /usr/bin/python3
