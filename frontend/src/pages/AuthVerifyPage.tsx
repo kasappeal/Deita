@@ -34,7 +34,14 @@ const AuthVerifyPage: React.FC = () => {
           duration: 3000,
           isClosable: true,
         });
-        navigate('/');
+        
+        // Check if user was visiting a workspace before authentication
+        const lastVisitedWorkspaceId = localStorage.getItem('lastVisitedWorkspaceId');
+        if (lastVisitedWorkspaceId) {
+          navigate(`/workspaces/${lastVisitedWorkspaceId}`);
+        } else {
+          navigate('/');
+        }
       } catch (error) {
         const errorMessage =
           error && typeof error === 'object' && 'response' in error
