@@ -2,6 +2,8 @@
 Main FastAPI application.
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -15,6 +17,7 @@ from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.workspaces import router as workspaces_router
 from app.core.config import get_settings
+from app.core.scheduler import get_scheduler
 from app.services.exceptions import (
     BadRequestException,
     ForbiddenException,
@@ -22,6 +25,21 @@ from app.services.exceptions import (
 )
 
 settings = get_settings()
+
+
+# Application lifecycle manager
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle: startup and shutdown."""
+    # Startup
+    scheduler = get_scheduler(settings)
+    scheduler.start()
+
+    yield
+
+    # Shutdown
+    scheduler.shutdown()
+
 
 # Create FastAPI app
 app = FastAPI(
@@ -31,6 +49,7 @@ app = FastAPI(
     openapi_url="/v1/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Add CORS middleware
