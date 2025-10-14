@@ -16,8 +16,11 @@ settings = get_settings()
 # PostgreSQL for metadata and user data
 engine = create_engine(
     settings.database_url,
-    pool_pre_ping=True,
-    pool_recycle=300,
+    pool_size=settings.database_pool_size,            # max number of connections in pool
+    max_overflow=settings.database_max_overflow,      # max overflow connections
+    pool_timeout=settings.database_pool_timeout,      # seconds to wait for connection
+    pool_recycle=settings.database_pool_recycle,      # recycle connections after 5 min
+    pool_pre_ping=True,                                # check connection health
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

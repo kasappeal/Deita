@@ -26,6 +26,10 @@ class Settings(BaseSettings):
         default="postgresql://deita:password@localhost:5432/deita_dev",
         alias="DATABASE_URL",
     )
+    database_pool_size: int = Field(default=10, alias="DATABASE_POOL_SIZE")
+    database_max_overflow: int = Field(default=5, alias="DATABASE_MAX_OVERFLOW")
+    database_pool_timeout: int = Field(default=30, alias="DATABASE_POOL_TIMEOUT")
+    database_pool_recycle: int = Field(default=300, alias="DATABASE_POOL_RECYCLE")
 
     # === DuckDB Configuration ===
     duckdb_path: str = Field(default="/app/data/analytics.duckdb", alias="DUCKDB_PATH")
