@@ -101,6 +101,7 @@ const QueryRunner: React.FC<QueryRunnerProps> = ({ workspaceId, query, setQuery,
                 : `Run Query (${navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl'}+Enter)`
             }
             placement="top"
+            hasArrow
           >
             <Button
               type="submit"
