@@ -129,11 +129,12 @@ class QueryService:
         self._setup_s3(con)
         return con
 
-    def _execute_ducbkdb(self, sql: str) -> dict:
-        def timeout_handler(signum, frame):
-            raise QueryTimeout("Query timeout")  # noqa: F821
-        signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(self.settings.query_timeout_seconds)
+    def _execute_ducbkdb(self, sql: str, timeout: int | None = None) -> dict:
+        if timeout is not None:
+            def timeout_handler(signum, frame):
+                raise QueryTimeout("Query timeout")  # noqa: F821
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(timeout)
         try:
             con = self._get_connection()
             result = con.sql(sql)
@@ -146,7 +147,8 @@ class QueryService:
         except Exception as e:
             raise e
         finally:
-            signal.alarm(0)
+            if timeout is not None:
+                signal.alarm(0)
 
     def validate_query(self, query: str, files: list[File]) -> None:
         """
@@ -325,7 +327,7 @@ class QueryService:
         self.db.delete(query)
         self.db.commit()
 
-    def execute_query(self, query: str, files: list[File], page: int | None = None, size: int | None = None, count: bool = False) -> QueryResult:
+    def execute_query(self, query: str, files: list[File], page: int | None = None, size: int | None = None, count: bool = False, timeout: int | None = None) -> QueryResult:
         if files is None:
             files = []
         try:
@@ -341,8 +343,7 @@ class QueryService:
                 expression = self._add_limit(expression, page, size)  # type: ignore
             sql = expression.sql(dialect="duckdb")
             start_time = time.perf_counter()
-            print(sql)
-            result = self._execute_ducbkdb(sql)
+            result = self._execute_ducbkdb(sql, timeout=timeout)
             elapsed_time = time.perf_counter() - start_time
             return QueryResult(
                 time=elapsed_time,
