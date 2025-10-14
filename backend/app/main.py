@@ -51,7 +51,7 @@ app.add_middleware(SlowAPIMiddleware)
 # Add trusted host middleware (security)
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"],  # Configure this properly in production
+    allowed_hosts=settings.allowed_hosts
 )
 
 # Include routers

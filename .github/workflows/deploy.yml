@@ -69,6 +69,10 @@ jobs:
       - name: Create production environment file
         run: |
           cat > .env << EOF
+          DEBUG=${{ vars.DEBUG }}
+          ENVIRONMENT=production
+          ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}
+          ALLOWED_HOSTS=${{ vars.ALLOWED_HOSTS }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           S3_ENDPOINT=${{ secrets.S3_ENDPOINT }}
           S3_ACCESS_KEY=${{ secrets.S3_ACCESS_KEY }}
