@@ -1,12 +1,12 @@
 import {
-    Box,
-    Button,
-    HStack,
-    Icon,
-    Progress,
-    Text,
-    useToast,
-    VStack
+  Box,
+  Button,
+  HStack,
+  Icon,
+  Progress,
+  Text,
+  useToast,
+  VStack
 } from '@chakra-ui/react';
 import React, { useCallback, useRef, useState } from 'react';
 import { FiAlertTriangle, FiCheckCircle, FiUploadCloud, FiXCircle } from 'react-icons/fi';
@@ -99,18 +99,25 @@ const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, existingFiles 
       });
 
       // Update status to completed
-      setUploadingFiles(prev =>
-        prev.map(f => 
+      setUploadingFiles(prev => {
+        const updated = prev.map(f => 
           f.file === file 
-            ? { ...f, status: 'completed' } 
+            ? { ...f, status: 'completed' as const } 
             : f
-        )
-      );
-
-      if (onUploadComplete) {
-        // Pass the updated workspace info to the callback
-        onUploadComplete(response.data.workspace);
-      }
+        );
+        
+        // Only call onUploadComplete when ALL files are completed or have errors
+        const allFilesFinished = updated.every(f => 
+          f.status === 'completed' || f.status === 'error'
+        );
+        
+        if (allFilesFinished && pendingFiles.length === 0 && !currentFileToConfirm && onUploadComplete) {
+          // Pass the updated workspace info to the callback
+          setTimeout(() => onUploadComplete(response.data.workspace), 100);
+        }
+        
+        return updated;
+      });
     } catch (error: unknown) {
       console.error('Upload failed:', error);
       
@@ -123,13 +130,25 @@ const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, existingFiles 
         errorMessage = String(error.response.data.error);
       }
       
-      setUploadingFiles(prev =>
-        prev.map(f => 
+      setUploadingFiles(prev => {
+        const updated = prev.map(f => 
           f.file === file 
-            ? { ...f, status: 'error', error: errorMessage } 
+            ? { ...f, status: 'error' as const, error: errorMessage } 
             : f
-        )
-      );
+        );
+        
+        // Check if all files are finished (completed or error) after this error
+        const allFilesFinished = updated.every(f => 
+          f.status === 'completed' || f.status === 'error'
+        );
+        
+        if (allFilesFinished && pendingFiles.length === 0 && !currentFileToConfirm && onUploadComplete) {
+          // All files have finished processing, close the modal
+          setTimeout(() => onUploadComplete(), 100);
+        }
+        
+        return updated;
+      });
 
       toast({
         title: 'Upload failed',
@@ -139,7 +158,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, existingFiles 
         isClosable: true,
       });
     }
-  }, [workspaceId, toast, onUploadComplete]);
+  }, [workspaceId, toast, onUploadComplete, pendingFiles.length, currentFileToConfirm]);
 
   // Process multiple files, handling duplicates one by one
   const processFiles = useCallback((files: File[]) => {
