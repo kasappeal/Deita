@@ -5,12 +5,12 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class WorkspaceCreate(BaseModel):
     """Schema for creating a workspace."""
-    name: str
+    name: str = Field(..., min_length=1, max_length=255)
     visibility: Literal["public", "private"] | None = None
 
 class WorkspaceUpdate(BaseModel):

@@ -3,12 +3,12 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ChatMessageBase(BaseModel):
     """Base schema for chat messages."""
-    content: str
+    content: str = Field(..., min_length=1, max_length=5000)
     role: str  # 'user' or 'assistant'
     message_metadata: dict | None = None
     is_sql_query: bool = False

@@ -4,12 +4,12 @@ Query schema definitions.
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class QueryRequest(BaseModel):
     """Schema for SQL query request."""
-    query: str
+    query: str = Field(..., max_length=50000)
 
 
 class QueryResult(BaseModel):
@@ -22,8 +22,8 @@ class QueryResult(BaseModel):
 
 class SaveQueryRequest(BaseModel):
     """Schema for saving a query."""
-    name: str
-    query: str
+    name: str = Field(..., min_length=1, max_length=255)
+    query: str = Field(..., max_length=50000)
 
 
 class SavedQuery(BaseModel):
