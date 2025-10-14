@@ -101,7 +101,13 @@ async def execute_query(
         files = workspace_service.list_workspace_files(workspace, current_user)
 
         # Execute the query
-        return query_service.execute_query(query_request.query, files, page, count=count) # type: ignore
+        return query_service.execute_query(
+            query_request.query,
+            files,
+            page,
+            count=count,
+            timeout=settings.query_timeout_seconds
+        ) # type: ignore
     except WorkspaceNotFound:
         # If workspace doesn't exist, return null query
         return QueryResult(columns=[], rows=[], time=0.0)
