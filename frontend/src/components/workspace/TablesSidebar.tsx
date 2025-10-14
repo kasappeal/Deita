@@ -259,7 +259,7 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
 
                     {/* Link Button - Top Right */}
                     {selectedTableId && !isSelected && !isInJoin && (
-                      <Tooltip label="Join with selected file" placement="top">
+                      <Tooltip label="Join with selected file" placement="top" hasArrow>
                         <IconButton
                           aria-label="Join files"
                           icon={<Icon as={FiLink} />}
@@ -279,7 +279,7 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
 
                     {/* Add to Join Button - Top Right (when joining multiple tables) */}
                     {showAddToJoinButton && (
-                      <Tooltip label="Add to join" placement="top">
+                      <Tooltip label="Add to join" placement="top" hasArrow>
                         <IconButton
                           aria-label="Add to join"
                           icon={<Icon as={FiLink} />}
@@ -298,7 +298,7 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
                     )}
 
                     {/* Delete Button - Bottom Right */}
-                    <Tooltip label="Delete file" placement="top">
+                    <Tooltip label="Delete file" placement="top" hasArrow>
                       <IconButton
                         aria-label="Delete file"
                         icon={<Icon as={FiTrash2} />}
@@ -377,7 +377,7 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
                     <CardBody p={3} position="relative">
 
                       {/* Delete Button - Bottom Right */}
-                      <Tooltip label="Delete query" placement="top">
+                      <Tooltip label="Delete query" placement="top" hasArrow>
                         <IconButton
                           aria-label="Delete query"
                           icon={<Icon as={FiTrash2} />}
@@ -445,7 +445,7 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
 
         <Box p={2} pb={0}>
           <Flex gap={1} justify="space-between" flexShrink={0}>
-            <Tooltip label="Tables and files" placement="bottom">
+            <Tooltip label="Tables and files" placement="bottom" hasArrow>
               <IconButton
                 aria-label="Tables and files"
                 icon={<Icon as={FiFolder} />}
@@ -457,7 +457,7 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
               />
             </Tooltip>
             
-            <Tooltip label="AI" placement="bottom">
+            <Tooltip label="AI" placement="bottom" hasArrow>
               <IconButton
                 aria-label="AI"
                 icon={<Icon as={FiZap} />}
@@ -469,7 +469,7 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
               />
             </Tooltip>
             
-            <Tooltip label="Saved queries" placement="bottom">
+            <Tooltip label="Saved queries" placement="bottom" hasArrow>
               <IconButton
                 aria-label="Saved queries"
                 icon={<Icon as={FiCode} />}

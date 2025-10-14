@@ -315,7 +315,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
       >
         {/* Left side: Save query, Export, and pagination message */}
         <HStack spacing={2}>
-          <Tooltip label="Save Query" placement="bottom" openDelay={500}>
+          <Tooltip label="Save Query" placement="bottom" openDelay={500} hasArrow>
             <IconButton
               size="sm"
               aria-label="Save Query"
@@ -326,7 +326,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
               variant="outline"
             />
           </Tooltip>
-          <Tooltip label="Export to CSV" placement="bottom" openDelay={500}>
+          <Tooltip label="Export to CSV" placement="bottom" openDelay={500} hasArrow>
             <IconButton
               size="sm"
               aria-label="Export"
@@ -341,7 +341,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
             <Text fontSize="sm" color="gray.600">
               {getPaginationMessage()}
             </Text>
-            <Tooltip label="Count number of rows" placement="bottom" openDelay={500}>
+            <Tooltip label="Count number of rows" placement="bottom" openDelay={500} hasArrow>
               <Button
                 size="sm"
                 variant="outline"
@@ -357,7 +357,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
         
         {/* Right side: Navigation buttons */}
         <HStack spacing={2}>
-          <Tooltip label="Go to first results" placement="bottom" openDelay={500}>
+          <Tooltip label="Go to first results" placement="bottom" openDelay={500} hasArrow>
             <IconButton
               aria-label="Go to first results"
               size="sm"
@@ -367,7 +367,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
               onClick={handleFirstPage}
             />
           </Tooltip>
-          <Tooltip label="Previous results" placement="bottom" openDelay={500}>
+          <Tooltip label="Previous results" placement="bottom" openDelay={500} hasArrow>
             <IconButton
               aria-label="Previous results"
               size="sm"
@@ -377,7 +377,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
               onClick={handlePreviousPage}
             />
           </Tooltip>
-          <Tooltip label="Next results" placement="bottom" openDelay={500}>
+          <Tooltip label="Next results" placement="bottom" openDelay={500} hasArrow>
             <IconButton
               size="sm"
               aria-label="Next results"
@@ -387,7 +387,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
               onClick={handleNextPage}
             />
           </Tooltip>
-          <Tooltip label="Last results" placement="bottom" openDelay={500}>
+          <Tooltip label="Last results" placement="bottom" openDelay={500} hasArrow>
             <IconButton
               size="sm"
               aria-label="Last results"
