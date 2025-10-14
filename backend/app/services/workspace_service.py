@@ -4,8 +4,10 @@ WorkspaceService: Encapsulates business logic for workspace and file operations.
 import csv
 import io
 import os
+import re
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import magic
@@ -28,6 +30,19 @@ from app.services.exceptions import (
     WorkspaceQuotaExceeded,
 )
 from app.services.file_storage import FileStorage
+
+
+def sanitize_filename(filename: str, max_length: int = 255) -> str:
+    # Remove path components
+    filename = Path(filename).name
+    # Remove special characters except . - _
+    filename = re.sub(r'[^\w\s.-]', '', filename)
+    # Limit length
+    filename = filename[:max_length]
+    # Ensure extension is .csv
+    if not filename.lower().endswith('.csv'):
+        raise FileTypeNotAllowed("Invalid filename: must be .csv")
+    return filename
 
 
 class WorkspaceService:
@@ -141,7 +156,8 @@ class WorkspaceService:
 
     def upload_file(self, workspace: Workspace, file: UploadFile, user: User | None, overwrite: bool = False) -> FileModel:
         self._validate_file_permissions(workspace, user)
-        filename = file.filename or ""
+        raw_filename = file.filename or ""
+        filename = sanitize_filename(raw_filename)
         # Check for duplicate filename in workspace
         existing_files = self.db.query(FileModel).filter(FileModel.workspace_id == workspace.id, FileModel.filename == filename).all()
         if existing_files:
