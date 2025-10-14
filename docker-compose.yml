@@ -48,8 +48,7 @@ services:
     image: ghcr.io/kasappeal/deita/frontend:latest
     container_name: deita-frontend
     ports:
-      - "80:80"
-      - "443:443"
+      - "3000:80"
     depends_on:
       - backend
     restart: unless-stopped
