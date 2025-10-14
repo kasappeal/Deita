@@ -1,4 +1,6 @@
 import {
+  Alert,
+  AlertIcon,
   Box,
   Button,
   HStack,
@@ -10,6 +12,7 @@ import {
 } from '@chakra-ui/react';
 import React, { useCallback, useRef, useState } from 'react';
 import { FiAlertTriangle, FiCheckCircle, FiUploadCloud, FiXCircle } from 'react-icons/fi';
+import { env } from '../../config/env';
 import apiClient from '../../services/api';
 
 interface Workspace {
@@ -314,6 +317,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, existingFiles 
 
   return (
     <VStack spacing={4} width="100%">
+
       <Box
         ref={dropAreaRef}
         w="100%"
@@ -356,6 +360,16 @@ const FileUploader: React.FC<FileUploaderProps> = ({ workspaceId, existingFiles 
           Choose Files
         </Button>
       </Box>
+
+      {/* Cloudflare Protection Notice for Production */}
+      {env.IS_PRODUCTION && (
+        <Alert status="info" borderRadius="md">
+          <AlertIcon />
+          <Text fontSize="sm">
+            <strong>Slow upload?</strong> It&apos;s because of Cloudflare protection.<br/>Sorry but... remember, this is free! 🚀
+          </Text>
+        </Alert>
+      )}
 
       {uploadingFiles.length > 0 && (
         <VStack spacing={4} align="stretch" width="100%">
