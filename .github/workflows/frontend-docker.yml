@@ -63,6 +63,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VITE_API_URL=${{ env.VITE_API_URL }}
+            VITE_API_URL=${{ vars.VITE_API_URL }}
             VITE_ENVIRONMENT=production
             VITE_APP_NAME=Deita
