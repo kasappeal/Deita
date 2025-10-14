@@ -136,7 +136,6 @@ class AIService:
         user_id: int | None = None
     ) -> str:
         db_description = self.generate_db_description(files)
-        print(db_description)
 
         # Get chat memory context if workspace_id is provided
         memory_context_str = ""
