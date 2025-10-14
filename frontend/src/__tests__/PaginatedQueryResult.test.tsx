@@ -9,10 +9,13 @@ import { workspaceApi } from '../services/api';
 jest.mock('../services/api', () => ({
   workspaceApi: {
     executeQuery: jest.fn(),
+    exportQueryAsCsv: jest.fn(),
+    saveQuery: jest.fn(),
   },
 }));
 
 const mockExecuteQuery = workspaceApi.executeQuery as jest.MockedFunction<typeof workspaceApi.executeQuery>;
+const mockExportQueryAsCsv = workspaceApi.exportQueryAsCsv as jest.MockedFunction<typeof workspaceApi.exportQueryAsCsv>;
 
 const mockResult = {
   columns: ['id', 'name', 'value'],
@@ -316,5 +319,105 @@ describe('PaginatedQueryResult', () => {
 
     // Should still show original results
     expect(screen.getByText('Showing first 3 rows of')).toBeInTheDocument();
+  });
+
+  it('shows exporting toast when exporting data to CSV', async () => {
+    // Mock the export function
+    const mockBlob = new Blob(['test,data\n1,2\n'], { type: 'text/csv' });
+    mockExportQueryAsCsv.mockResolvedValue(mockBlob);
+
+    // Mock URL methods
+    window.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
+    window.URL.revokeObjectURL = jest.fn();
+
+    render(
+      <TestWrapper>
+        <PaginatedQueryResult
+          workspaceId="test-workspace"
+          query="SELECT * FROM test"
+          initialResult={mockResult}
+        />
+      </TestWrapper>
+    );
+
+    // Click the export button
+    const exportButton = screen.getByRole('button', { name: /export/i });
+    fireEvent.click(exportButton);
+
+    // Wait for the exporting toast to appear
+    await waitFor(() => {
+      expect(screen.getByText('Exporting your data')).toBeInTheDocument();
+    });
+
+    // Should show a message about time to export
+    await waitFor(() => {
+      expect(screen.getByText(/It can take some time to export/)).toBeInTheDocument();
+    });
+
+    // Wait for export to complete
+    await waitFor(() => {
+      expect(mockExportQueryAsCsv).toHaveBeenCalledWith('test-workspace', 'SELECT * FROM test');
+    });
+
+    // Wait for success toast
+    await waitFor(() => {
+      expect(screen.getByText('Export Successful')).toBeInTheDocument();
+    });
+  });
+
+  it('shows exporting toast with row count when totalCount is already available', async () => {
+    // Mock the export function
+    const mockBlob = new Blob(['test,data\n1,2\n'], { type: 'text/csv' });
+    mockExportQueryAsCsv.mockResolvedValue(mockBlob);
+
+    // Mock URL methods
+    window.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
+    window.URL.revokeObjectURL = jest.fn();
+
+    const countResult = {
+      columns: ['count'],
+      rows: [[1500]],
+      has_more: false,
+      time: 0.05,
+    };
+
+    mockExecuteQuery.mockResolvedValueOnce(countResult);
+
+    render(
+      <TestWrapper>
+        <PaginatedQueryResult
+          workspaceId="test-workspace"
+          query="SELECT * FROM test"
+          initialResult={mockResult}
+        />
+      </TestWrapper>
+    );
+
+    // First, fetch the count
+    fireEvent.click(screen.getByText('?'));
+
+    await waitFor(() => {
+      expect(screen.getByText('1,500')).toBeInTheDocument();
+    });
+
+    // Now click export
+    const exportButton = screen.getByRole('button', { name: /export/i });
+    fireEvent.click(exportButton);
+
+    // Should show exporting toast with specific row count
+    await waitFor(() => {
+      expect(screen.getByText('Exporting your data')).toBeInTheDocument();
+      expect(screen.getByText('It can take some time to export 1,500 rows')).toBeInTheDocument();
+    });
+
+    // Wait for export to complete
+    await waitFor(() => {
+      expect(mockExportQueryAsCsv).toHaveBeenCalledWith('test-workspace', 'SELECT * FROM test');
+    });
+
+    // Wait for success toast
+    await waitFor(() => {
+      expect(screen.getByText('Export Successful')).toBeInTheDocument();
+    });
   });
 });

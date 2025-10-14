@@ -215,6 +215,33 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
 
   const handleExport = async () => {
     setExporting(true);
+    
+    // Get total count if we don't have it yet
+    let rowCount = totalCount;
+    if (rowCount === null) {
+      try {
+        const response = await workspaceApi.executeQuery(workspaceId, query, 1, undefined, true);
+        if (response.rows.length > 0 && response.rows[0].length > 0) {
+          rowCount = response.rows[0][0] as number;
+          setTotalCount(rowCount);
+        }
+      } catch (error) {
+        console.error('Error fetching row count for export:', error);
+        // Continue with export even if we couldn't get the count
+      }
+    }
+    
+    // Show exporting toast
+    const exportingToastId = toast({
+      title: 'Exporting your data',
+      description: rowCount !== null 
+        ? `It can take some time to export ${rowCount.toLocaleString()} rows` 
+        : 'It can take some time to export your data',
+      status: 'info',
+      duration: null, // Keep it visible until we close it manually
+      isClosable: false,
+    });
+    
     try {
       const csvBlob = await workspaceApi.exportQueryAsCsv(workspaceId, query);
       
@@ -235,6 +262,9 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
       // Clean up the URL object
       window.URL.revokeObjectURL(url);
       
+      // Close the exporting toast
+      toast.close(exportingToastId);
+      
       toast({
         title: 'Export Successful',
         description: 'Query results exported as CSV.',
@@ -244,6 +274,10 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
       });
     } catch (error) {
       console.error('Export Error:', error);
+      
+      // Close the exporting toast
+      toast.close(exportingToastId);
+      
       toast({
         title: 'Export Error',
         description: 'Failed to export query results.',
