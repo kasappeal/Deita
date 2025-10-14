@@ -332,7 +332,8 @@ class QueryService:
             if size is None:
                 size = self.settings.duckdb_page_size
             if count:
-                query = f"SELECT COUNT(*) AS count FROM ({query}) arctic_monkeys"
+                query = query.strip().rstrip(';')
+                query = f"SELECT COUNT(*) AS count FROM ({query}) q"
             expression = parse_one(query)
             expression = self._validate_query_and_map_tables(expression, files)
             is_limited = not count and page is not None
