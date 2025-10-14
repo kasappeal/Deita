@@ -61,7 +61,7 @@ const TableCard: React.FC<TableCardProps> = ({
       <CardBody p={3} position="relative">
         {/* Link Button - Top Right */}
         {showLinkButton && selectedTableId && (
-          <Tooltip label="Join with selected file" placement="top">
+          <Tooltip label="Join with selected file" placement="top" hasArrow>
             <IconButton
               aria-label="Join files"
               icon={<Icon as={FiLink} />}
@@ -81,7 +81,7 @@ const TableCard: React.FC<TableCardProps> = ({
 
         {/* Add to Join Button - Top Right (when joining multiple tables) */}
         {showAddToJoinButton && (
-          <Tooltip label="Add to join" placement="top">
+          <Tooltip label="Add to join" placement="top" hasArrow>
             <IconButton
               aria-label="Add to join"
               icon={<Icon as={FiLink} />}
@@ -100,7 +100,7 @@ const TableCard: React.FC<TableCardProps> = ({
         )}
 
         {/* Delete Button - Bottom Right */}
-        <Tooltip label="Delete file" placement="top">
+        <Tooltip label="Delete file" placement="top" hasArrow>
           <IconButton
             aria-label="Delete file"
             icon={<Icon as={FiTrash2} />}

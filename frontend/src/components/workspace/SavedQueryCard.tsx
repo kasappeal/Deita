@@ -31,7 +31,7 @@ const SavedQueryCard: React.FC<SavedQueryCardProps> = ({
     >
       <CardBody p={3} position="relative">
         {/* Delete Button - Bottom Right */}
-        <Tooltip label="Delete query" placement="top">
+        <Tooltip label="Delete query" placement="top" hasArrow>
           <IconButton
             aria-label="Delete query"
             icon={<Icon as={FiTrash2} />}

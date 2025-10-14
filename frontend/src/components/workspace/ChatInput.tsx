@@ -61,7 +61,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           />
         </Box>
         <Flex gap={1}>
-          <Tooltip label="Clear chat history" placement="top">
+          <Tooltip label="Clear chat history" placement="top" hasArrow>
             <IconButton
               aria-label="Clear chat"
               icon={<Icon as={FiTrash2} />}
@@ -72,7 +72,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
               onClick={onClear}
             />
           </Tooltip>
-          <Tooltip label="Send message (Ctrl+Enter)" placement="top">
+          <Tooltip label="Send message (Ctrl+Enter)" placement="top" hasArrow>
             <IconButton
               aria-label="Send message"
               icon={<Icon as={FiSend} />}

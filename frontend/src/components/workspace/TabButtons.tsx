@@ -13,7 +13,7 @@ const TabButtons: React.FC<TabButtonsProps> = ({ activeTab, onTabChange }) => {
   return (
     <Box p={2} pb={0}>
       <Flex gap={1} justify="space-between" flexShrink={0}>
-        <Tooltip label="Tables and files" placement="bottom">
+        <Tooltip label="Tables and files" placement="bottom" hasArrow>
           <IconButton
             aria-label="Tables and files"
             icon={<Icon as={FiFolder} />}
@@ -25,7 +25,7 @@ const TabButtons: React.FC<TabButtonsProps> = ({ activeTab, onTabChange }) => {
           />
         </Tooltip>
         
-        <Tooltip label="AI" placement="bottom">
+        <Tooltip label="AI" placement="bottom" hasArrow>
           <IconButton
             aria-label="AI"
             icon={<Icon as={FiZap} />}
@@ -37,7 +37,7 @@ const TabButtons: React.FC<TabButtonsProps> = ({ activeTab, onTabChange }) => {
           />
         </Tooltip>
         
-        <Tooltip label="Saved queries" placement="bottom">
+        <Tooltip label="Saved queries" placement="bottom" hasArrow>
           <IconButton
             aria-label="Saved queries"
             icon={<Icon as={FiCode} />}
