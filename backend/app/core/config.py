@@ -4,12 +4,16 @@ Core configuration and settings for Deita backend application.
 
 from functools import lru_cache
 
-from pydantic import Field, validator
-from pydantic_settings import BaseSettings
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Application settings and configuration."""
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=False,
+    )
 
     # === Application Settings ===
     app_name: str = Field(default="Deita", alias="APP_NAME")
@@ -60,7 +64,6 @@ class Settings(BaseSettings):
     # === File Upload Limits ===
     orphaned_workspace_max_file_size: int = Field(default=52428800, alias="ORPHANED_WORKSPACE_MAX_FILE_SIZE")
     orphaned_workspace_max_storage: int = Field(default=104857600, alias="ORPHANED_WORKSPACE_MAX_STORAGE")
-    owned_workspace_max_file_size: int = Field(default=209715200, alias="OWNED_WORKSPACE_MAX_FILE_SIZE")
     owned_workspace_max_storage: int = Field(default=209715200, alias="OWNED_WORKSPACE_MAX_STORAGE")
 
     # === AI Service Configuration ===
@@ -89,17 +92,6 @@ class Settings(BaseSettings):
 
     # === Query timeout ===
     query_timeout_seconds: int = Field(default=30, alias="QUERY_TIMEOUT_SECONDS")
-
-    @validator("allowed_origins", pre=True)
-    def parse_cors_origins(cls, v):
-        """Parse CORS origins from string or list."""
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
-        return v
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
 
 
 @lru_cache
