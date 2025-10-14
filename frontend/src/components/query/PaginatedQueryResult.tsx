@@ -315,7 +315,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
       >
         {/* Left side: Save query, Export, and pagination message */}
         <HStack spacing={2}>
-          <Tooltip label="Save Query" placement="bottom">
+          <Tooltip label="Save Query" placement="bottom" openDelay={500}>
             <IconButton
               size="sm"
               aria-label="Save Query"
@@ -326,7 +326,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
               variant="outline"
             />
           </Tooltip>
-          <Tooltip label="Export data to CSV" placement="bottom">
+          <Tooltip label="Export to CSV" placement="bottom" openDelay={500}>
             <IconButton
               size="sm"
               aria-label="Export"
@@ -341,52 +341,62 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
             <Text fontSize="sm" color="gray.600">
               {getPaginationMessage()}
             </Text>
-            <Button
-              size="sm"
-              variant="outline"
-              isLoading={countLoading}
-              onClick={executeCountQuery}
-              isDisabled={loading}
-            >
-              {totalCount !== null ? totalCount.toLocaleString() : '?'}
-            </Button>
+            <Tooltip label="Count number of rows" placement="bottom" openDelay={500}>
+              <Button
+                size="sm"
+                variant="outline"
+                isLoading={countLoading}
+                onClick={executeCountQuery}
+                isDisabled={loading || totalCount !== null}
+              >
+                {totalCount !== null ? totalCount.toLocaleString() : '?'}
+              </Button>
+            </Tooltip>
           </HStack>
         </HStack>
         
         {/* Right side: Navigation buttons */}
         <HStack spacing={2}>
-          <IconButton
-            aria-label="Go to first results"
-            size="sm"
-            variant="outline"
-            icon={<Icon as={FiChevronsLeft} />}
-            isDisabled={currentPage === 1 || loading || countLoading}
-            onClick={handleFirstPage}
-          />
-          <IconButton
-            aria-label="Previous results"
-            size="sm"
-            variant="outline"
-            icon={<Icon as={FiChevronLeft} />}
-            isDisabled={currentPage === 1 || loading || countLoading}
-            onClick={handlePreviousPage}
-          />
-          <IconButton
-            size="sm"
-            aria-label="Next results"
-            variant="outline"
-            icon={<Icon as={FiChevronRight} />}
-            isDisabled={!result.has_more || loading || countLoading}
-            onClick={handleNextPage}
-          />
-          <IconButton
-            size="sm"
-            aria-label="Last results"
-            variant="outline"
-            icon={<Icon as={FiChevronsRight} />}
-            isDisabled={!result.has_more || loading || countLoading}
-            onClick={handleLastPage}
-          />
+          <Tooltip label="Go to first results" placement="bottom" openDelay={500}>
+            <IconButton
+              aria-label="Go to first results"
+              size="sm"
+              variant="outline"
+              icon={<Icon as={FiChevronsLeft} />}
+              isDisabled={currentPage === 1 || loading || countLoading}
+              onClick={handleFirstPage}
+            />
+          </Tooltip>
+          <Tooltip label="Previous results" placement="bottom" openDelay={500}>
+            <IconButton
+              aria-label="Previous results"
+              size="sm"
+              variant="outline"
+              icon={<Icon as={FiChevronLeft} />}
+              isDisabled={currentPage === 1 || loading || countLoading}
+              onClick={handlePreviousPage}
+            />
+          </Tooltip>
+          <Tooltip label="Next results" placement="bottom" openDelay={500}>
+            <IconButton
+              size="sm"
+              aria-label="Next results"
+              variant="outline"
+              icon={<Icon as={FiChevronRight} />}
+              isDisabled={!result.has_more || loading || countLoading}
+              onClick={handleNextPage}
+            />
+          </Tooltip>
+          <Tooltip label="Last results" placement="bottom" openDelay={500}>
+            <IconButton
+              size="sm"
+              aria-label="Last results"
+              variant="outline"
+              icon={<Icon as={FiChevronsRight} />}
+              isDisabled={!result.has_more || loading || countLoading}
+              onClick={handleLastPage}
+            />
+          </Tooltip>
         </HStack>
       </Flex>
 
