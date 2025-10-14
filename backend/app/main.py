@@ -2,10 +2,14 @@
 Main FastAPI application.
 """
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
@@ -38,6 +42,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add SlowAPI rate limiting middleware
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
 # Add trusted host middleware (security)
 app.add_middleware(
     TrustedHostMiddleware,
@@ -48,6 +58,14 @@ app.add_middleware(
 app.include_router(health_router, prefix="/v1", tags=["Health"])
 app.include_router(auth_router, prefix="/v1/auth", tags=["Authentication"])
 app.include_router(workspaces_router, prefix="/v1/workspaces", tags=["Workspaces"])
+
+# Apply global rate limit to all endpoints (default: 100 requests/minute per IP)
+# Apply rate limiting to all routers using dependencies
+def limit_dependency(request: Request):
+    return limiter.limit(settings.api_rate_limit)(lambda: None)(request)
+
+for router in [health_router, auth_router, workspaces_router]:
+    router.dependencies = [Depends(limit_dependency)] + getattr(router, 'dependencies', [])
 
 
 # --- Global Exception Handlers ---

@@ -30,6 +30,7 @@ dependencies = [
     "pytest-asyncio>=1.2.0",
     "pytest-cov>=7.0.0",
     "ruff>=0.13.3",
+    "slowapi>=0.1.9",
 ]
 
 [build-system]
