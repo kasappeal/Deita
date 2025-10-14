@@ -327,8 +327,8 @@ describe('PaginatedQueryResult', () => {
     mockExportQueryAsCsv.mockResolvedValue(mockBlob);
 
     // Mock URL methods
-    global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
-    global.URL.revokeObjectURL = jest.fn();
+    window.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
+    window.URL.revokeObjectURL = jest.fn();
 
     render(
       <TestWrapper>
@@ -371,8 +371,8 @@ describe('PaginatedQueryResult', () => {
     mockExportQueryAsCsv.mockResolvedValue(mockBlob);
 
     // Mock URL methods
-    global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
-    global.URL.revokeObjectURL = jest.fn();
+    window.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
+    window.URL.revokeObjectURL = jest.fn();
 
     const countResult = {
       columns: ['count'],
