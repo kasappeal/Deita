@@ -1,39 +1,21 @@
 import {
-  AlertDialog,
-  AlertDialogBody,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogOverlay,
   Box,
   Button,
-  Card,
-  CardBody,
   Divider,
-  Flex,
   Icon,
-  IconButton,
   Stack,
   Text,
-  Tooltip,
   VStack,
   useToast
 } from '@chakra-ui/react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FiCode, FiDatabase, FiFile, FiFolder, FiLink, FiTrash2, FiUpload, FiZap } from 'react-icons/fi';
+import React, { useCallback, useEffect, useState } from 'react';
+import { FiTrash2, FiUpload } from 'react-icons/fi';
 import { FileData, QueryData, workspaceApi } from '../../services/api';
 import ChatInterface from './ChatInterface';
-
-interface TableItem {
-  id: string;
-  name: string;
-  fileName: string;
-  rows: number;
-  fileSize: string;
-  isSelected?: boolean;
-}
-
-type TabType = 'tables' | 'sql' | 'ai';
+import DeleteConfirmationDialog from './DeleteConfirmationDialog';
+import SavedQueryCard from './SavedQueryCard';
+import TabButtons, { TabType } from './TabButtons';
+import TableCard, { TableItem } from './TableCard';
 
 interface TablesSidebarProps {
   files: FileData[];
@@ -93,7 +75,6 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
     name: ''
   });
   const toast = useToast();
-  const cancelRef = useRef<HTMLButtonElement>(null);
 
   const fetchSavedQueries = useCallback(async () => {
     try {
@@ -198,6 +179,14 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
     setDeleteConfirmation({ isOpen: false, type: 'file', id: '', name: '' });
   };
 
+  const handleConfirmDelete = () => {
+    if (deleteConfirmation.type === 'file') {
+      confirmDeleteFile();
+    } else {
+      confirmDeleteQuery();
+    }
+  };
+
   const tables: TableItem[] = files.map(file => ({
     id: file.id,
     name: getTableDisplayName(file.filename),
@@ -240,118 +229,22 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
                 const isSelected = selectedTableId === table.id;
                 const isInJoin = joinState?.selectedTables.includes(table.id);
                 const showAddToJoinButton = joinState && joinState.selectedTables.length > 0 && !isInJoin;
+                const showLinkButton = selectedTableId && !isSelected && !isInJoin;
 
                 return (
-                <Card
-                  key={table.id}
-                  cursor="pointer"
-                  onClick={() => onTableSelect?.(table.id)}
-                  bg={isSelected ? "blue.50" : isInJoin ? "blue.50" : "white"}
-                  borderColor={isSelected ? "blue.200" : isInJoin ? "blue.200" : "gray.200"}
-                  borderWidth="1px"
-                  _hover={{
-                    bg: isSelected ? "blue.50" : isInJoin ? "blue.50" : "gray.50",
-                    borderColor: "blue.300"
-                  }}
-                  size="sm"
-                >
-                  <CardBody p={3} position="relative">
-
-                    {/* Link Button - Top Right */}
-                    {selectedTableId && !isSelected && !isInJoin && (
-                      <Tooltip label="Join with selected file" placement="top">
-                        <IconButton
-                          aria-label="Join files"
-                          icon={<Icon as={FiLink} />}
-                          size="xs"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onJoinStart?.(selectedTableId!, table.id);
-                          }}
-                          position="absolute"
-                          top={2}
-                          right={2}
-                          zIndex={2}
-                        />
-                      </Tooltip>
-                    )}
-
-                    {/* Add to Join Button - Top Right (when joining multiple tables) */}
-                    {showAddToJoinButton && (
-                      <Tooltip label="Add to join" placement="top">
-                        <IconButton
-                          aria-label="Add to join"
-                          icon={<Icon as={FiLink} />}
-                          size="xs"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onJoinAdd?.(table.id);
-                          }}
-                          position="absolute"
-                          top={2}
-                          right={2}
-                          zIndex={2}
-                        />
-                      </Tooltip>
-                    )}
-
-                    {/* Delete Button - Bottom Right */}
-                    <Tooltip label="Delete file" placement="top">
-                      <IconButton
-                        aria-label="Delete file"
-                        icon={<Icon as={FiTrash2} />}
-                        size="xs"
-                        variant="ghost"
-                        colorScheme="red"
-                        onClick={() => handleDeleteFile(table.id, table.fileName)}
-                        position="absolute"
-                        bottom={2}
-                        right={2}
-                        zIndex={1}
-                      />
-                    </Tooltip>
-
-                    <VStack align="stretch" spacing={2}>
-                      {/* Table Name */}
-                      <Flex align="center" gap={2}>
-                        <Text 
-                          fontWeight="medium" 
-                          color="gray.800" 
-                          fontSize="sm"
-                        >
-                          {table.name}
-                        </Text>
-                        {isInJoin && (
-                          <Icon 
-                            as={FiLink} 
-                            color="blue.500" 
-                            boxSize={4}
-                            opacity={0.7}
-                          />
-                        )}
-                      </Flex>
-                      
-                      {/* File Source */}
-                      <Flex align="center" gap={1}>
-                        <Icon as={FiFile} color="gray.500" boxSize={3} />
-                        <Text fontSize="xs" color="gray.500" noOfLines={1}>
-                          {table.fileName}
-                        </Text>
-                      </Flex>
-                      
-                      {/* Stats Row */}
-                      <Flex justify="space-between" fontSize="xs" color="gray.600">
-                        <Flex align="center" gap={1}>
-                          <Icon as={FiDatabase} boxSize={3} />
-                          <Text>{table.rows.toLocaleString()} rows</Text>
-                        </Flex>
-                        <Text pr={8}>{table.fileSize}</Text>
-                      </Flex>
-                    </VStack>
-                  </CardBody>
-                </Card>
+                  <TableCard
+                    key={table.id}
+                    table={table}
+                    isSelected={!!isSelected}
+                    isInJoin={!!isInJoin}
+                    showLinkButton={!!showLinkButton}
+                    showAddToJoinButton={!!showAddToJoinButton}
+                    onTableSelect={onTableSelect || (() => {})}
+                    onJoinStart={(tableId) => onJoinStart?.(selectedTableId!, tableId)}
+                    onJoinAdd={onJoinAdd}
+                    onDelete={handleDeleteFile}
+                    selectedTableId={selectedTableId}
+                  />
                 );
               })}
             </Stack>
@@ -367,51 +260,12 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
                 </Box>
               ) : (
                 savedQueries.map((query) => (
-                  <Card
+                  <SavedQueryCard
                     key={query.id}
-                    cursor="pointer"
-                    onClick={() => onQuerySelect?.(query)}
-                    _hover={{ bg: "gray.50" }}
-                    size="sm"
-                  >
-                    <CardBody p={3} position="relative">
-
-                      {/* Delete Button - Bottom Right */}
-                      <Tooltip label="Delete query" placement="top">
-                        <IconButton
-                          aria-label="Delete query"
-                          icon={<Icon as={FiTrash2} />}
-                          size="xs"
-                          variant="ghost"
-                          colorScheme="red"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteQuery(query.id, query.name);
-                          }}
-                          position="absolute"
-                          bottom={2}
-                          right={2}
-                          zIndex={1}
-                        />
-                      </Tooltip>
-
-                      <VStack align="stretch" spacing={1}>
-                        {/* Query Name */}
-                        <Text 
-                          fontWeight="medium" 
-                          color="gray.800" 
-                          fontSize="sm"
-                        >
-                          {query.name}
-                        </Text>
-                        
-                        {/* Creation Date */}
-                        <Text fontSize="xs" color="gray.500">
-                          {new Date(query.created_at).toLocaleDateString()}
-                        </Text>
-                      </VStack>
-                    </CardBody>
-                  </Card>
+                    query={query}
+                    onSelect={onQuerySelect || (() => {})}
+                    onDelete={handleDeleteQuery}
+                  />
                 ))
               )}
             </Stack>
@@ -442,46 +296,7 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
       <VStack align="stretch" spacing={2} flex={1} minH={0}>
 
         {/* Tab Buttons */}
-
-        <Box p={2} pb={0}>
-          <Flex gap={1} justify="space-between" flexShrink={0}>
-            <Tooltip label="Tables and files" placement="bottom">
-              <IconButton
-                aria-label="Tables and files"
-                icon={<Icon as={FiFolder} />}
-                size="sm"
-                variant={activeTab === 'tables' ? 'solid' : 'ghost'}
-                colorScheme={activeTab === 'tables' ? 'blue' : 'gray'}
-                onClick={() => setActiveTab('tables')}
-                flex={1}
-              />
-            </Tooltip>
-            
-            <Tooltip label="AI" placement="bottom">
-              <IconButton
-                aria-label="AI"
-                icon={<Icon as={FiZap} />}
-                size="sm"
-                variant={activeTab === 'ai' ? 'solid' : 'ghost'}
-                colorScheme={activeTab === 'ai' ? 'blue' : 'gray'}
-                onClick={() => setActiveTab('ai')}
-                flex={1}
-              />
-            </Tooltip>
-            
-            <Tooltip label="Saved queries" placement="bottom">
-              <IconButton
-                aria-label="Saved queries"
-                icon={<Icon as={FiCode} />}
-                size="sm"
-                variant={activeTab === 'sql' ? 'solid' : 'ghost'}
-                colorScheme={activeTab === 'sql' ? 'blue' : 'gray'}
-                onClick={() => setActiveTab('sql')}
-                flex={1}
-              />
-            </Tooltip>
-          </Flex>
-        </Box>
+        <TabButtons activeTab={activeTab} onTabChange={setActiveTab} />
 
         {/* Separator */}
         <Divider flexShrink={0} m={0} />
@@ -500,36 +315,13 @@ const TablesSidebar: React.FC<TablesSidebarProps> = ({
       </VStack>
 
       {/* Delete Confirmation Modal */}
-      <AlertDialog
+      <DeleteConfirmationDialog
         isOpen={deleteConfirmation.isOpen}
-        leastDestructiveRef={cancelRef}
+        itemType={deleteConfirmation.type}
+        itemName={deleteConfirmation.name}
         onClose={closeDeleteConfirmation}
-      >
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              Delete {deleteConfirmation.type === 'file' ? 'File' : 'Query'}
-            </AlertDialogHeader>
-
-            <AlertDialogBody>
-              Are you sure you want to delete &ldquo;{deleteConfirmation.name}&rdquo;? This action cannot be undone.
-            </AlertDialogBody>
-
-            <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={closeDeleteConfirmation}>
-                Cancel
-              </Button>
-              <Button 
-                colorScheme="red" 
-                onClick={deleteConfirmation.type === 'file' ? confirmDeleteFile : confirmDeleteQuery} 
-                ml={3}
-              >
-                Delete
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
+        onConfirm={handleConfirmDelete}
+      />
     </Box>
   );
 };
