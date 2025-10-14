@@ -211,7 +211,7 @@ async def save_query(
     Save a SQL query in a workspace.
 
     Permission rules:
-    - If workspace is public and has no owner (orphan), any user can save queries
+    - If workspace is public, any user (including anonymous) can save queries
     - If workspace is private, only the owner can save queries
     """
     # Get the workspace and verify it exists
@@ -242,7 +242,7 @@ async def delete_query(
     Delete a SQL query from a workspace.
 
     Permission rules:
-    - If workspace is public and has no owner (orphan), any user can delete queries
+    - If workspace is public, any user (including anonymous) can delete queries
     - If workspace is private, only the owner can delete queries
     """
     # Get the workspace and verify it exists

@@ -110,7 +110,7 @@ class TestSaveQuery(APITest):
         assert response.status_code == 201
 
     def test_save_query_in_public_owned_workspace_as_non_owner(self):
-        """Test saving a query in a public owned workspace as non-owner (should fail)."""
+        """Test saving a query in a public owned workspace as non-owner (should succeed)."""
         owner = self._create_user("owner@example.com")
         other_user = self._create_user("other@example.com")
         other_headers = self._get_auth_headers(other_user)
@@ -122,7 +122,7 @@ class TestSaveQuery(APITest):
         # Upload a CSV file
         self._create_file_via_api(workspace_id, "data.csv", user=owner)
 
-        # Try to save a query as non-owner (should fail with 403)
+        # Try to save a query as non-owner (should succeed for public workspaces)
         response = self.client.post(
             f"/v1/workspaces/{workspace_id}/queries",
             json={
@@ -132,7 +132,35 @@ class TestSaveQuery(APITest):
             headers=other_headers
         )
 
-        assert response.status_code == 403
+        assert response.status_code == 201
+        data = response.json()
+        assert data["name"] == "Non-owner Query"
+        assert data["query"] == "SELECT * FROM data"
+
+    def test_save_query_in_public_owned_workspace_without_auth(self):
+        """Test saving a query in a public owned workspace without authentication (should succeed)."""
+        owner = self._create_user("owner@example.com")
+
+        # Create a public workspace with owner
+        workspace = self._create_workspace_via_api(user=owner, name="Public Owned", visibility="public")
+        workspace_id = workspace["id"]
+
+        # Upload a CSV file
+        self._create_file_via_api(workspace_id, "data.csv", user=owner)
+
+        # Try to save a query without authentication (should succeed for public workspaces)
+        response = self.client.post(
+            f"/v1/workspaces/{workspace_id}/queries",
+            json={
+                "name": "Anonymous Query",
+                "query": "SELECT * FROM data"
+            }
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["name"] == "Anonymous Query"
+        assert data["query"] == "SELECT * FROM data"
 
     def test_save_query_with_invalid_sql(self):
         """Test saving a query with invalid SQL (should fail with 400)."""

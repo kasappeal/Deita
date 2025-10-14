@@ -276,7 +276,7 @@ class TestDeleteQueryEndpoint(APITest):
         assert deleted_query is None
 
     def test_delete_query_public_owned_workspace_as_non_owner(self):
-        """Test query deletion in public owned workspace as non-owner (should fail)."""
+        """Test query deletion in public owned workspace as non-owner (should succeed)."""
         owner = self._create_user("owner@example.com")
         owner_headers = self._get_auth_headers(owner)
 
@@ -303,17 +303,52 @@ class TestDeleteQueryEndpoint(APITest):
         query_data = response.json()
         query_id = query_data["id"]
 
-        # Try to delete the query as non-owner (should fail with 403)
+        # Try to delete the query as non-owner (should succeed for public workspaces)
         delete_response = self.client.delete(
             f"/v1/workspaces/{workspace_id}/queries/{query_id}",
             headers=other_headers
         )
 
-        assert delete_response.status_code == 403
-        data = delete_response.json()
-        assert "error" in data
-        assert "Not authorized" in data["error"]
+        assert delete_response.status_code == 204
+        assert delete_response.content == b""
 
-        # Verify query still exists in database
-        query_record = self.db.query(Query).filter(Query.id == uuid.UUID(query_id)).first()
-        assert query_record is not None
+        # Verify query is deleted from database
+        deleted_query = self.db.query(Query).filter(Query.id == uuid.UUID(query_id)).first()
+        assert deleted_query is None
+
+    def test_delete_query_public_owned_workspace_without_auth(self):
+        """Test query deletion in public owned workspace without authentication (should succeed)."""
+        owner = self._create_user("owner@example.com")
+        owner_headers = self._get_auth_headers(owner)
+
+        # Create a public workspace with owner
+        workspace = self._create_workspace_via_api(user=owner, name="Public Owned", visibility="public")
+        workspace_id = workspace["id"]
+
+        # Upload a CSV file
+        self._create_file_via_api(workspace_id, "data.csv", user=owner)
+
+        # Save a query as owner
+        response = self.client.post(
+            f"/v1/workspaces/{workspace_id}/queries",
+            json={
+                "name": "Owner Query",
+                "query": "SELECT * FROM data"
+            },
+            headers=owner_headers
+        )
+        assert response.status_code == 201
+        query_data = response.json()
+        query_id = query_data["id"]
+
+        # Try to delete the query without authentication (should succeed for public workspaces)
+        delete_response = self.client.delete(
+            f"/v1/workspaces/{workspace_id}/queries/{query_id}"
+        )
+
+        assert delete_response.status_code == 204
+        assert delete_response.content == b""
+
+        # Verify query is deleted from database
+        deleted_query = self.db.query(Query).filter(Query.id == uuid.UUID(query_id)).first()
+        assert deleted_query is None

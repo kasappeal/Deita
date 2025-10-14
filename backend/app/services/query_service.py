@@ -226,9 +226,8 @@ class QueryService:
         Save a SQL query in a workspace.
 
         Permission rules:
-        - If workspace is public and has no owner (orphan), any user can save queries
+        - If workspace is public, any user (including anonymous) can save queries
         - If workspace is private, only the owner can save queries
-        - If workspace is public with owner, only the owner can save queries
 
         Args:
             workspace: The workspace to save the query in
@@ -245,16 +244,12 @@ class QueryService:
             BadQuery: If the query is invalid
             DisallowedQuery: If the query contains disallowed expressions
         """
-        # Check permissions based on workspace visibility and ownership
-        if workspace.is_public and workspace.is_orphaned:
-            # Public orphan workspace: anyone can save queries
+        # Check permissions based on workspace visibility
+        if workspace.is_public:
+            # Public workspace: anyone (including anonymous) can save queries
             pass
-        elif workspace.is_private:
-            # Private workspace: only owner can save queries
-            if not current_user or workspace.owner_id != current_user.id: # type: ignore
-                raise WorkspaceForbidden("Not authorized to save queries in this workspace")
         else:
-            # Public workspace with owner: only owner can save queries
+            # Private workspace: only owner can save queries
             if not current_user or workspace.owner_id != current_user.id: # type: ignore
                 raise WorkspaceForbidden("Not authorized to save queries in this workspace")
 
@@ -289,7 +284,7 @@ class QueryService:
         Delete a SQL query from a workspace.
 
         Permission rules:
-        - If workspace is public and has no owner (orphan), any user can delete queries
+        - If workspace is public, any user (including anonymous) can delete queries
         - If workspace is private, only the owner can delete queries
 
         Args:
@@ -310,16 +305,12 @@ class QueryService:
         if not query:
             raise QueryNotFound(f"Query not found: {query_id}")
 
-        # Check permissions based on workspace visibility and ownership
-        if workspace.is_public and workspace.is_orphaned:
-            # Public orphan workspace: anyone can delete queries
+        # Check permissions based on workspace visibility
+        if workspace.is_public:
+            # Public workspace: anyone (including anonymous) can delete queries
             pass
-        elif workspace.is_private:
-            # Private workspace: only owner can delete queries
-            if not current_user or workspace.owner_id != current_user.id:
-                raise WorkspaceForbidden("Not authorized to delete queries in this workspace")
         else:
-            # Public workspace with owner: only owner can delete queries
+            # Private workspace: only owner can delete queries
             if not current_user or workspace.owner_id != current_user.id:
                 raise WorkspaceForbidden("Not authorized to delete queries in this workspace")
 
