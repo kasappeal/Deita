@@ -28,11 +28,4 @@ export function validateEnvironment(): void {
       throw new Error(`Required environment variable ${varName} is not set`)
     }
   }
-  
-  console.log('Environment configuration loaded:', {
-    API_URL: env.API_URL,
-    APP_NAME: env.APP_NAME,
-    ENVIRONMENT: env.ENVIRONMENT,
-    IS_PRODUCTION: env.IS_PRODUCTION,
-  })
 }

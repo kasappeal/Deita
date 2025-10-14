@@ -30,17 +30,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  
-  // Debug state changes
-  useEffect(() => {
-    console.log('isLoadingHistory changed:', isLoadingHistory);
-  }, [isLoadingHistory]);
-  
-  useEffect(() => {
-    console.log('messages changed:', messages.length, 'messages');
-  }, [messages]);
-  
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isLoadingHistoryRef = useRef(false);
@@ -73,13 +62,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
       
       try {
         const chatMessages = await workspaceApi.getChatMessages(workspaceId);
-        console.log('Chat messages loaded:', chatMessages);
         
         // Only update state if component is still mounted
         if (isMounted) {
           const uiMessages = chatMessages.map(convertToUIMessage);
           setMessages(uiMessages);
-          console.log('UI messages set:', uiMessages);
         }
       } catch (error) {
         if (isMounted) {
@@ -97,7 +84,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
         isLoadingHistoryRef.current = false;
         if (isMounted) {
           setIsLoadingHistory(false);
-          console.log('Loading history state cleared');
         }
       }
     };

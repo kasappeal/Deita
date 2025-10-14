@@ -31,7 +31,6 @@ const QueryRunner: React.FC<QueryRunnerProps> = ({ workspaceId, query, setQuery,
     try {
       const res = await apiClient.post(`/v1/workspaces/${workspaceId}/query`, { query: sqlQuery });
       onResult?.(res.data);
-      console.log('Query Result:', res.data);
     } catch (err) {
       onResult?.(null);
       console.error('Query Error:', err);
