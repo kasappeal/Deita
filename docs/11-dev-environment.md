@@ -227,9 +227,6 @@ The dev container comes with debugging pre-configured:
 | APP_NAME                    | Application name             | Deita                                        |
 | APP_VERSION                 | Application version          | 0.1.0                                        |
 | DUCKDB_PATH                 | DuckDB file path             | /app/data/deita.duckdb                       |
-| POSTHOG_ENABLED             | Enable Posthog analytics     | false                                        |
-| POSTHOG_API_KEY             | Posthog API key              | (blank for dev)                              |
-| POSTHOG_HOST                | Posthog host                 | https://app.posthog.com                      |
 | AI_MODEL_NAME               | AI model name                | local-llm                                    |
 | AI_MODEL_ENDPOINT           | AI model endpoint            | http://localhost:8001                        |
 | AI_MODEL_API_KEY            | AI model API key             | (blank for dev)                              |
