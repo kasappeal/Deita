@@ -1,5 +1,6 @@
 import {
   Box,
+  Button,
   Flex,
   Icon,
   IconButton,
@@ -11,8 +12,10 @@ import {
   useToast
 } from '@chakra-ui/react';
 import React, { useEffect, useRef, useState } from 'react';
-import { FiCode, FiSend, FiTrash2, FiUser, FiZap } from 'react-icons/fi';
+import { FiCode, FiLock, FiSend, FiTrash2, FiUser, FiZap } from 'react-icons/fi';
+import { useAuth } from '../../contexts/AuthContext';
 import { ChatMessage, workspaceApi } from '../../services/api';
+import SignInModal from '../auth/SignInModal';
 
 interface ChatInterfaceProps {
   workspaceId?: string;
@@ -30,10 +33,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isLoadingHistoryRef = useRef(false);
   const toast = useToast();
+  const { isAuthenticated } = useAuth();
 
   const scrollToBottom = () => {
     if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
@@ -52,7 +57,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
     let isMounted = true;
     
     const loadChatHistory = async () => {
-      if (!workspaceId) return;
+      // Only load if authenticated and workspace is available
+      if (!workspaceId || !isAuthenticated) return;
       
       // Avoid duplicate calls but ensure we can always load initially
       if (isLoadingHistoryRef.current) return;
@@ -96,24 +102,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
       // Ensure loading state is cleared on unmount
       isLoadingHistoryRef.current = false;
     };
-  }, [workspaceId, toast]);
+  }, [workspaceId, isAuthenticated, toast]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Focus input when component is shown (workspaceId becomes available)
+  // Focus input when component is shown (workspaceId becomes available and user is authenticated)
   useEffect(() => {
-    if (workspaceId && inputRef.current) {
+    if (workspaceId && isAuthenticated && inputRef.current) {
       // Small delay to ensure component is fully rendered
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
     }
-  }, [workspaceId]);
+  }, [workspaceId, isAuthenticated]);
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading || !workspaceId) return;
+    if (!inputValue.trim() || isLoading || !workspaceId || !isAuthenticated) return;
 
     const messageContent = inputValue.trim();
     setInputValue('');
@@ -227,6 +233,31 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
       });
     }
   };
+
+  // Show authentication required state if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <>
+        <VStack spacing={4} flex={1} justify="center" align="center" p={8}>
+          <Icon as={FiLock} boxSize={12} color="gray.300" />
+          <Text color="gray.500" fontSize="lg" fontWeight="medium">
+            Sign in to use AI Chat
+          </Text>
+          <Button
+            colorScheme="blue"
+            size="md"
+            onClick={() => setIsSignInModalOpen(true)}
+          >
+            Sign In
+          </Button>
+        </VStack>
+        <SignInModal
+          isOpen={isSignInModalOpen}
+          onClose={() => setIsSignInModalOpen(false)}
+        />
+      </>
+    );
+  }
 
   // Don't render if no workspace ID
   if (!workspaceId) {
@@ -404,12 +435,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
         <VStack spacing={0} align="stretch">
           <Textarea
             ref={inputRef}
-            placeholder={workspaceId ? "Ask about your data" : "Select a workspace to chat"}
+            placeholder={!isAuthenticated ? "Sign in to use chat" : workspaceId ? "Ask about your data" : "Select a workspace to chat"}
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             size="sm"
-            disabled={isLoading || !workspaceId}
+            disabled={isLoading || !workspaceId || !isAuthenticated}
             flex={1}
             minH="70px"
             maxH="120px"
@@ -429,7 +460,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
               aria-label="Clear chat"
               icon={<Icon as={FiTrash2} />}
               onClick={handleClearChat}
-              isDisabled={messages.length === 0 || isLoading || !workspaceId}
+              isDisabled={messages.length === 0 || isLoading || !workspaceId || !isAuthenticated}
               colorScheme="gray"
               variant="ghost"
               size="sm"
@@ -445,7 +476,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ workspaceId, onQuery, onS
               aria-label="Send message (Ctrl+Enter)"
               icon={<Icon as={FiSend} />}
               onClick={handleSendMessage}
-              isDisabled={!inputValue.trim() || isLoading || !workspaceId}
+              isDisabled={!inputValue.trim() || isLoading || !workspaceId || !isAuthenticated}
               isLoading={isLoading}
               colorScheme="blue"
               variant="ghost"
