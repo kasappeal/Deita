@@ -7,7 +7,9 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (fallback to install if ci fails)
-RUN npm ci 2>/dev/null || npm install
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    npm ci 2>/dev/null || npm install
 
 # Build arguments for environment variables
 ARG VITE_API_URL

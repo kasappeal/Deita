@@ -14,7 +14,8 @@ COPY . /app
 
 # Install only runtime system dependencies
 RUN apt-get update && \
-    apt-get install -y curl libmagic1 && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends curl libmagic1 && \
     rm -rf /var/lib/apt/lists/* && \
     pip install uv && \
     groupadd -r deita && \
