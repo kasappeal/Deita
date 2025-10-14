@@ -64,6 +64,7 @@ class Settings(BaseSettings):
     # === File Upload Limits ===
     orphaned_workspace_max_file_size: int = Field(default=52428800, alias="ORPHANED_WORKSPACE_MAX_FILE_SIZE")
     orphaned_workspace_max_storage: int = Field(default=104857600, alias="ORPHANED_WORKSPACE_MAX_STORAGE")
+    owned_workspace_max_file_size: int = Field(default=209715200, alias="OWNED_WORKSPACE_MAX_FILE_SIZE")
     owned_workspace_max_storage: int = Field(default=209715200, alias="OWNED_WORKSPACE_MAX_STORAGE")
 
     # === AI Service Configuration ===
