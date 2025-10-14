@@ -118,7 +118,7 @@
       register: up_result
     
     - name: Wait for backend container to be healthy
-      shell: docker compose ps --filter "name=backend" --format json
+      shell: docker compose ps backend --format json
       args:
         chdir: "{{ app_directory }}"
       register: backend_status
