@@ -71,6 +71,7 @@ jobs:
           cat > .env << EOF
           DEBUG=${{ vars.DEBUG }}
           ENVIRONMENT=production
+          FRONTEND_URL=${{ vars.FRONTEND_URL }}
           ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           S3_ENDPOINT=${{ secrets.S3_ENDPOINT }}
