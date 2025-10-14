@@ -18,7 +18,11 @@ const WorkspaceSettingsModal: React.FC<{
   const [name, setName] = useState(workspace?.name || '');
   const [visibility, setVisibility] = useState(workspace?.visibility || 'public');
   const [saving, setSaving] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const toast = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     setName(workspace?.name || '');
@@ -50,30 +54,116 @@ const WorkspaceSettingsModal: React.FC<{
     }
   }
 
+  const handleDeleteClick = () => {
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!workspace?.id || deleteConfirmName !== workspace.name) return;
+    setDeleting(true);
+    try {
+      await workspaceApi.deleteWorkspace(workspace.id);
+      toast({
+        title: 'Workspace deleted',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      setIsDeleteModalOpen(false);
+      onClose();
+      navigate('/workspaces/');
+    } catch {
+      toast({
+        title: 'Error deleting workspace',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteModalClose = () => {
+    setIsDeleteModalOpen(false);
+    setDeleteConfirmName('');
+  };
+
+  const isDeleteEnabled = deleteConfirmName === workspace?.name;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} isCentered>
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>Edit Workspace</ModalHeader>
-        <ModalBody>
-          <FormControl mb={4}>
-            <FormLabel>Name</FormLabel>
-            <Input value={name} onChange={e => setName(e.target.value)} />
-          </FormControl>
-          <FormControl>
-            <FormLabel>Visibility</FormLabel>
-            <Select value={visibility} onChange={e => setVisibility(e.target.value as 'public' | 'private')}>
-              <option value="public">Public</option>
-              <option value="private">Private</option>
-            </Select>
-          </FormControl>
-        </ModalBody>
-        <ModalFooter>
-          <Button colorScheme="blue" mr={3} onClick={handleSave} isLoading={saving}>Save</Button>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+    <>
+      <Modal isOpen={isOpen} onClose={onClose} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Workspace Settings</ModalHeader>
+          <ModalBody>
+            <FormControl mb={4}>
+              <FormLabel>Name</FormLabel>
+              <Input value={name} onChange={e => setName(e.target.value)} />
+            </FormControl>
+            <FormControl>
+              <FormLabel>Visibility</FormLabel>
+              <Select value={visibility} onChange={e => setVisibility(e.target.value as 'public' | 'private')}>
+                <option value="public">Public</option>
+                <option value="private">Private</option>
+              </Select>
+            </FormControl>
+          </ModalBody>
+          <ModalFooter justifyContent="space-between">
+            <Button colorScheme="red" variant="outline" onClick={handleDeleteClick}>
+              Delete Workspace
+            </Button>
+            <HStack>
+              <Button colorScheme="blue" onClick={handleSave} isLoading={saving}>Save</Button>
+              <Button variant="ghost" onClick={onClose}>Cancel</Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Delete confirmation modal */}
+      <Modal isOpen={isDeleteModalOpen} onClose={handleDeleteModalClose} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Delete Workspace</ModalHeader>
+          <ModalBody>
+            <Box mb={4}>
+              This action cannot be undone. All files, tables, queries, and chat messages in this workspace will be permanently deleted.
+            </Box>
+            <FormControl>
+              <FormLabel>
+                Type <strong>{workspace?.name}</strong> to confirm deletion:
+              </FormLabel>
+              <Input
+                value={deleteConfirmName}
+                onChange={(e) => setDeleteConfirmName(e.target.value)}
+                placeholder={workspace?.name}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && isDeleteEnabled) {
+                    handleDeleteConfirm();
+                  }
+                }}
+              />
+            </FormControl>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              colorScheme="red"
+              mr={3}
+              onClick={handleDeleteConfirm}
+              isLoading={deleting}
+              isDisabled={!isDeleteEnabled}
+            >
+              Delete
+            </Button>
+            <Button variant="ghost" onClick={handleDeleteModalClose}>
+              Cancel
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </>
   );
 };
 
