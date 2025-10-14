@@ -2,6 +2,7 @@
 Query service for validating and executing SQL queries.
 """
 
+import signal
 import time
 
 import duckdb
@@ -52,6 +53,7 @@ from app.services.exceptions import (
     BadQuery,
     DisallowedQuery,
     QueryNotFound,
+    QueryTimeout,
     WorkspaceForbidden,
 )
 
@@ -93,9 +95,7 @@ class QueryService:
         call += ")"
         return call
 
-    def _validate_query_and_map_tables(self, expression: Expression, files: list[File] = None) -> Expression:
-        if files is None:
-            files = []
+    def _validate_query_and_map_tables(self, expression: Expression, files: list[File]) -> Expression:
         tables_map = {
             file.table_name: file for file in files # type: ignore
         }
@@ -130,14 +130,23 @@ class QueryService:
         return con
 
     def _execute_ducbkdb(self, sql: str) -> dict:
-        con = self._get_connection()
-        result = con.sql(sql)
-        res = {
-            'columns': result.columns,
-            'rows': result.fetchall()
-        }
-        con.close()
-        return res
+        def timeout_handler(signum, frame):
+            raise QueryTimeout("Query timeout")  # noqa: F821
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(30)  # 30 seconds timeout
+        try:
+            con = self._get_connection()
+            result = con.sql(sql)
+            res = {
+                'columns': result.columns,
+                'rows': result.fetchall()
+            }
+            con.close()
+            return res
+        except Exception as e:
+            raise e
+        finally:
+            signal.alarm(0)
 
     def validate_query(self, query: str, files: list[File]) -> None:
         """
@@ -240,11 +249,11 @@ class QueryService:
             pass
         elif workspace.is_private:
             # Private workspace: only owner can save queries
-            if not current_user or workspace.owner_id != current_user.id:
+            if not current_user or workspace.owner_id != current_user.id: # type: ignore
                 raise WorkspaceForbidden("Not authorized to save queries in this workspace")
         else:
             # Public workspace with owner: only owner can save queries
-            if not current_user or workspace.owner_id != current_user.id:
+            if not current_user or workspace.owner_id != current_user.id: # type: ignore
                 raise WorkspaceForbidden("Not authorized to save queries in this workspace")
 
         # Validate the query

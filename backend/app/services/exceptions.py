@@ -36,8 +36,10 @@ class WorkspaceOrphanModification(BadRequestException):
 class WorkspaceAlreadyClaimed(ForbiddenException):
     pass
 
-
 class BadQuery(BadRequestException):
+    pass
+
+class QueryTimeout(BadRequestException):
     pass
 
 class DisallowedQuery(BadRequestException):
