@@ -16,7 +16,7 @@ COPY . /app
 RUN apt-get update && \
     apt-get install -y curl libmagic1 && \
     rm -rf /var/lib/apt/lists/* && \
-    pip install uv alembic && \
+    pip install uv && \
     groupadd -r deita && \
     useradd -r -g deita deita  && \
     uv sync --no-dev   && \

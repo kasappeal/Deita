@@ -127,7 +127,7 @@
       delay: 10
     
     - name: Run database migrations
-      shell: docker compose exec -T backend alembic upgrade head
+      shell: docker compose exec -T backend uv run alembic upgrade head
       args:
         chdir: "{{ app_directory }}"
       register: migration_result
