@@ -1,30 +1,13 @@
 import { workspaceApi } from '@/services/api';
 import {
   Box,
-  Button,
-  Flex,
-  FormControl,
-  FormLabel,
-  HStack,
-  Icon,
-  IconButton,
-  Input,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  Text,
-  Tooltip,
-  useDisclosure,
   useToast,
 } from '@chakra-ui/react';
-import React, { useEffect, useRef, useState } from 'react';
-import { FiChevronLeft, FiChevronRight, FiChevronsLeft, FiChevronsRight, FiSave, FiShare } from 'react-icons/fi';
+import React, { useEffect, useState } from 'react';
 
+import PaginationControls from './PaginationControls';
 import QueryResultTable, { QueryResultData } from './QueryResultTable';
+import SaveQueryModal from './SaveQueryModal';
 
 interface PaginatedQueryResultProps {
   workspaceId: string;
@@ -48,9 +31,8 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
   const [saving, setSaving] = useState(false);
   const [resultsPerPage, setResultsPerPage] = useState<number | null>(null);
   const [queryName, setQueryName] = useState('');
-  const { isOpen: isSaveModalOpen, onOpen: onSaveModalOpen, onClose: onSaveModalClose } = useDisclosure();
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const toast = useToast();
-  const initialFocusRef = useRef<HTMLInputElement>(null);
 
   // Update internal state when initialResult prop changes (e.g., when switching tables)
   useEffect(() => {
@@ -174,7 +156,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
 
   const handleSaveQuery = () => {
     setQueryName('');
-    onSaveModalOpen();
+    setIsSaveModalOpen(true);
   };
 
   const handleSaveQueryConfirm = async () => {
@@ -193,7 +175,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
         isClosable: true,
       });
       onQuerySaved?.();
-      onSaveModalClose();
+      handleSaveModalClose();
     } catch (error) {
       console.error('Save Query Error:', error);
       toast({
@@ -210,7 +192,7 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
 
   const handleSaveModalClose = () => {
     setQueryName('');
-    onSaveModalClose();
+    setIsSaveModalOpen(false);
   };
 
   const handleExport = async () => {
@@ -303,92 +285,23 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
       flexDirection="column"
     >
       {/* Pagination Controls */}
-      <Flex
-        justify="space-between"
-        align="center"
-        mb={4}
-        px={4}
-        py={2}
-        borderBottom="1px"
-        borderColor="gray.200"
-        bg="gray.50"
-      >
-        {/* Left side: Save query, Export, and pagination message */}
-        <HStack spacing={2}>
-          <Tooltip label="Save Query" placement="bottom">
-            <IconButton
-              size="sm"
-              aria-label="Save Query"
-              onClick={handleSaveQuery}
-              isLoading={saving}
-              icon={<Icon as={FiSave} />}
-              isDisabled={loading || countLoading}
-              variant="outline"
-            />
-          </Tooltip>
-          <Tooltip label="Export data to CSV" placement="bottom">
-            <IconButton
-              size="sm"
-              aria-label="Export"
-              onClick={handleExport}
-              isLoading={exporting}
-              icon={<Icon as={FiShare} />}
-              isDisabled={loading || countLoading}
-              variant="outline"
-            />
-          </Tooltip>
-          <HStack spacing={2}>
-            <Text fontSize="sm" color="gray.600">
-              {getPaginationMessage()}
-            </Text>
-            <Button
-              size="sm"
-              variant="outline"
-              isLoading={countLoading}
-              onClick={executeCountQuery}
-              isDisabled={loading}
-            >
-              {totalCount !== null ? totalCount.toLocaleString() : '?'}
-            </Button>
-          </HStack>
-        </HStack>
-        
-        {/* Right side: Navigation buttons */}
-        <HStack spacing={2}>
-          <IconButton
-            aria-label="Go to first results"
-            size="sm"
-            variant="outline"
-            icon={<Icon as={FiChevronsLeft} />}
-            isDisabled={currentPage === 1 || loading || countLoading}
-            onClick={handleFirstPage}
-          />
-          <IconButton
-            aria-label="Previous results"
-            size="sm"
-            variant="outline"
-            icon={<Icon as={FiChevronLeft} />}
-            isDisabled={currentPage === 1 || loading || countLoading}
-            onClick={handlePreviousPage}
-          />
-          <IconButton
-            size="sm"
-            aria-label="Next results"
-            variant="outline"
-            icon={<Icon as={FiChevronRight} />}
-            isDisabled={!result.has_more || loading || countLoading}
-            onClick={handleNextPage}
-          />
-          <IconButton
-            size="sm"
-            aria-label="Last results"
-            variant="outline"
-            icon={<Icon as={FiChevronsRight} />}
-            isDisabled={!result.has_more || loading || countLoading}
-            onClick={handleLastPage}
-          />
-        </HStack>
-      </Flex>
+      <PaginationControls
+        currentPage={currentPage}
+        hasMore={result.has_more}
+        totalCount={totalCount}
+        loading={loading}
+        countLoading={countLoading}
+        exporting={exporting}
+        saving={saving}
+        paginationMessage={getPaginationMessage()}
+        onFirstPage={handleFirstPage}
+        onPreviousPage={handlePreviousPage}
+        onNextPage={handleNextPage}
+        onLastPage={handleLastPage}
+        onSaveQuery={handleSaveQuery}
+        onExport={handleExport}
+        onFetchCount={executeCountQuery}
+      />
 
       {/* Query Results Table */}
       <Box flex={1} overflowY="auto">
@@ -396,42 +309,14 @@ const PaginatedQueryResult: React.FC<PaginatedQueryResultProps> = ({
       </Box>
 
       {/* Save Query Modal */}
-      <Modal isOpen={isSaveModalOpen} onClose={handleSaveModalClose} isCentered initialFocusRef={initialFocusRef}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Save Query</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <FormControl>
-              <FormLabel>Query Name</FormLabel>
-              <Input
-                ref={initialFocusRef}
-                placeholder="Enter a name for this query"
-                value={queryName}
-                onChange={(e) => setQueryName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && queryName.trim()) {
-                    handleSaveQueryConfirm();
-                  }
-                }}
-              />
-            </FormControl>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={handleSaveModalClose}>
-              Cancel
-            </Button>
-            <Button
-              colorScheme="blue"
-              onClick={handleSaveQueryConfirm}
-              isLoading={saving}
-              isDisabled={!queryName.trim()}
-            >
-              Save Query
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <SaveQueryModal
+        isOpen={isSaveModalOpen}
+        queryName={queryName}
+        saving={saving}
+        onClose={handleSaveModalClose}
+        onQueryNameChange={setQueryName}
+        onSave={handleSaveQueryConfirm}
+      />
     </Box>
   );
 };
