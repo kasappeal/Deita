@@ -133,7 +133,7 @@ class QueryService:
         def timeout_handler(signum, frame):
             raise QueryTimeout("Query timeout")  # noqa: F821
         signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(30)  # 30 seconds timeout
+        signal.alarm(self.settings.query_timeout_seconds)
         try:
             con = self._get_connection()
             result = con.sql(sql)

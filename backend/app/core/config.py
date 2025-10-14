@@ -83,6 +83,9 @@ class Settings(BaseSettings):
         default="http://localhost:3000", alias="FRONTEND_URL"
     )
 
+    # === Query timeout ===
+    query_timeout_seconds: int = Field(default=30, alias="QUERY_TIMEOUT_SECONDS")
+
     @validator("allowed_origins", pre=True)
     def parse_cors_origins(cls, v):
         """Parse CORS origins from string or list."""
