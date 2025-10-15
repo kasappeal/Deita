@@ -5,7 +5,7 @@ name: Deploy to Production
 
 on:
   workflow_run:
-    workflows: ["Build Backend Docker Image",]
+    workflows: ["Build Backend Docker Image", "Build Frontend Docker Image"]
     types: [completed]
     branches: [main]
     
@@ -20,6 +20,8 @@ jobs:
   check-prerequisites:
     name: Check Prerequisites
     runs-on: ubuntu-latest
+    if: >
+      ${{ github.event.workflow_run.conclusion == 'success' }}
     outputs:
       should-deploy: ${{ steps.check.outputs.should-deploy }}
     steps:

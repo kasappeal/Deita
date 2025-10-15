@@ -1,5 +1,5 @@
 # GitHub Actions workflow to build and publish frontend Docker image
-name: Build and Publish Frontend Docker Image
+name: Build Frontend Docker Image
 
 on:
   workflow_run:
