@@ -72,38 +72,34 @@ Deita follows a modern, scalable architecture with clear separation of concerns:
 
 ### Backend
 
-- **Framework**: FastAPI 0.116+ (Python 3.11+)
+- **Framework**: FastAPI (Python 3.11+)
 - **Package Manager**: uv (fast Python package management)
 - **Databases**:
-  - PostgreSQL (SQLAlchemy 2.0+, Alembic migrations)
-  - DuckDB 0.9+ (analytical queries)
-- **Storage**: boto3 1.40+ (S3-compatible)
-- **AI**: LiteLLM 1.77+ (OpenRouter integration)
-- **Auth**: python-jose 3.3+ (JWT), Passlib (bcrypt)
-- **Rate Limiting**: SlowAPI 0.1.9
-- **Validation**: Pydantic 2.5+, sqlglot 19.9+
-- **Testing**: Pytest 8.4+, pytest-cov 7.0+
-- **Linting**: Ruff 0.13+ (fast Python linter/formatter)
+  - PostgreSQL (SQLAlchemy, Alembic migrations)
+  - DuckDB (analytical queries)
+- **Storage**: boto3 (S3-compatible)
+- **AI**: LiteLLM (OpenRouter integration)
+- **Auth**: python-jose (JWT), Passlib (bcrypt)
+- **Rate Limiting**: SlowAPI
+- **Validation**: Pydantic, sqlglot
+- **Testing**: Pytest, pytest-cov
+- **Linting**: Ruff
 
 ### Frontend
 
-- **Framework**: React 18.2 with TypeScript 5.3+
-- **UI Library**: Chakra UI 2.8 with Emotion
-- **Build Tool**: Vite 7.1 (fast builds and HMR)
-- **State Management**: React Context API, Zustand 4.4
-- **Server State**: React Query 3.39
-- **Router**: React Router DOM 6.8
-- **HTTP Client**: Axios 1.6
-- **Forms**: React Hook Form 7.47, Zod 3.22
-- **Testing**: Jest 29.5, React Testing Library
-- **Linting**: ESLint 8.57, Prettier 3.6
+- **Framework**: React 18 with TypeScript
+- **UI Library**: Chakra UI 2 with Emotion
+- **Build Tool**: Vite
+- **State Management**: React Context API, Zustand
+- **Router**: React Router DOM
+- **HTTP Client**: Axios
+- **Testing**: Jest, React Testing Library
+- **Linting**: ESLint, Prettier
 
 ### Infrastructure
 
 - **Development**: Docker Compose, MinIO, MailHog
 - **CI/CD**: GitHub Actions
-- **Hosting**: Hetzner Cloud (production)
-- **Reverse Proxy**: Nginx (frontend container)
 
 ## 🚀 Getting Started
 
@@ -342,10 +338,6 @@ docker-compose logs -f
 - Enhanced monitoring and analytics
 - Responsive design
 
-## 🏷️ Versioning
-
-This project uses [Semantic Versioning](https://semver.org/).
-
 **Current Version**: 0.1.0 (Alpha)
 
 ## 🆘 Support
@@ -353,6 +345,6 @@ This project uses [Semantic Versioning](https://semver.org/).
 - 📖 Check the [documentation](docs/) for detailed information
 - 🐛 Report bugs via [GitHub Issues](https://github.com/kasappeal/deita/issues)
 
-## 👥 Team
+----
 
 Built with ❤️ by Alberto Casero
