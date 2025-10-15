@@ -94,8 +94,34 @@ class Settings(BaseSettings):
     # === Query timeout ===
     query_timeout_seconds: int = Field(default=30, alias="QUERY_TIMEOUT_SECONDS")
 
+    # === Workspace Cleanup Configuration ===
+    # Retention periods in days
+    orphaned_workspace_retention_days: int = Field(
+        default=15, alias="ORPHANED_WORKSPACE_RETENTION_DAYS"
+    )
+    owned_workspace_retention_days: int = Field(
+        default=30, alias="OWNED_WORKSPACE_RETENTION_DAYS"
+    )
+
+    # Warning intervals in days (before deletion)
+    workspace_warning_intervals: list[int] = Field(
+        default_factory=lambda: [15, 10, 5, 3, 1],
+        alias="WORKSPACE_WARNING_INTERVALS"
+    )
+
+    # Cleanup job schedule (cron expression: run daily at 2 AM)
+    cleanup_job_cron: str = Field(
+        default="0 2 * * *", alias="CLEANUP_JOB_CRON"
+    )
+
+    # Enable/disable cleanup job
+    cleanup_job_enabled: bool = Field(
+        default=True, alias="CLEANUP_JOB_ENABLED"
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:
     """Get cached application settings."""
     return Settings()
+
